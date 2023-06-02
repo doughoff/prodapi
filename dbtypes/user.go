@@ -1,11 +1,14 @@
-package dbmodel
+package dbtypes
 
 import (
+	uuid "github.com/jackc/pgx-gofrs-uuid"
 	"time"
 )
 
 type User struct {
-	ID        string
+	ID        *uuid.UUID
+	Status    string
+	Roles     []string
 	Name      string
 	Email     string
 	Password  string

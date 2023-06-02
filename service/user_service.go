@@ -1,20 +1,22 @@
 package service
 
 import (
-	"github.com/hoffax/prodapi/dbmodel"
-	"github.com/hoffax/prodapi/repository"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/hoffax/prodapi/dbtypes"
+	"github.com/hoffax/prodapi/repository/user"
 )
 
 type UserService struct {
-	UserRepository *repository.UserRepository
+	UserRepository *user.PgRepository
 }
 
-func NewUserService(userRepository *repository.UserRepository) *UserService {
+func NewUserService(userRepository *user.PgRepository) *UserService {
 	return &UserService{
 		UserRepository: userRepository,
 	}
 }
 
-func (s *UserService) GetByID(userID string) (*dbmodel.User, error) {
-	return s.UserRepository.GetByID(userID)
+func (s *UserService) GetByID(userID string) (*dbtypes.User, error) {
+	return nil, nil
 }
