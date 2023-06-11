@@ -1,16 +1,15 @@
 version: '2'
 sql:
   - engine: 'postgresql'
-    queries: '/queries'
-    schema: '/db/migrations'
+    queries: '/postgres/query'
+    schema: '/postgres/migrations'
     gen:
       go:
-        package: 'repository'
-        out: 'repository'
+        package: 'postgres'
+        out: 'postgres'
         sql_package: 'pgx/v5'
         emit_empty_slices: true
-        emit_json_tags: true
-        json_tags_case_style: 'camel'
+        emit_json_tags: false
         emit_result_struct_pointers: true
         emit_params_struct_pointers: true
         emit_methods_with_db_argument: true

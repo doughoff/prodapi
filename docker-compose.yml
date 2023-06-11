@@ -4,13 +4,13 @@ services:
     image: postgres:15
     restart: always
     environment:
-      POSTGRES_USER: pqgotest
+      POSTGRES_USER: app
       POSTGRES_PASSWORD: example
-      POSTGRES_DB: pqgotest
+      POSTGRES_DB: prod-db
 #    volumes:
 #      - /docker/volumes/prodrest/db/data:/var/lib/postgresql/data/
     ports:
-      - "19009:5432"
+      - "5882:5432"
 
 #volumes:
 #  postgres_data:
