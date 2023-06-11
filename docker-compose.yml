@@ -1,0 +1,16 @@
+version: '3.8'
+services:
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: pqgotest
+      POSTGRES_PASSWORD: example
+      POSTGRES_DB: pqgotest
+#    volumes:
+#      - /docker/volumes/prodrest/db/data:/var/lib/postgresql/data/
+    ports:
+      - "19009:5432"
+
+#volumes:
+#  postgres_data:
