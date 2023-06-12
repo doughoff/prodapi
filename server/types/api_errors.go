@@ -1,11 +1,15 @@
 package types
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/gofiber/fiber/v2"
+)
 
 // ApiErrors represents a custom API error
 type ApiErrors struct {
-	Code    string `json:"code"`
-	Message string `json:"message"`
+	StatusCode int    `json:"-"`
+	Code       string `json:"code"`
+	Message    string `json:"message"`
 }
 
 // Implement the error interface
@@ -24,23 +28,26 @@ func (a ApiErrors) ToJSON() map[string]string {
 // NewInvalidParamsError creates a new ApiErrors for invalid parameters
 func NewInvalidParamsError(message string) error {
 	return &ApiErrors{
-		Code:    "invalid_params",
-		Message: message,
+		StatusCode: fiber.StatusBadRequest,
+		Code:       "invalid_params",
+		Message:    message,
 	}
 }
 
 // NewInvalidBodyError creates a new ApiErrors for an invalid body
 func NewInvalidBodyError() error {
 	return &ApiErrors{
-		Code:    "bad_formatted_body",
-		Message: "invalid json on request body",
+		StatusCode: fiber.StatusBadRequest,
+		Code:       "bad_formatted_body",
+		Message:    "invalid json on request body",
 	}
 }
 
 // NewNotFoundError creates a new ApiErrors for not found resources
 func NewNotFoundError() error {
 	return &ApiErrors{
-		Code:    "resource_not_found",
-		Message: "resource not found",
+		StatusCode: fiber.StatusNotFound,
+		Code:       "resource_not_found",
+		Message:    "resource not found",
 	}
 }

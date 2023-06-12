@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/hoffax/prodapi/postgres"
@@ -20,6 +21,7 @@ func Serve() {
 		fmt.Printf("err ping db")
 	}
 
+	validate := validator.New()
 	db := postgres.New()
 	dbWrapper := &types.DBWrapper{DB: conn}
 	app := fiber.New(fiber.Config{
@@ -34,8 +36,9 @@ func Serve() {
 	//})
 	//app.Use(middleware.AuthMiddleware(memoryStore))
 
-	routeManager := routes.NewRouteManager(app, db, dbWrapper)
+	routeManager := routes.NewRouteManager(app, db, dbWrapper, validate)
 	routeManager.RegisterEntityRoutes()
+	routeManager.RegisterUserRoutes()
 
 	err = app.Listen(":3088")
 	if err != nil {

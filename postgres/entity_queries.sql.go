@@ -53,7 +53,7 @@ SELECT COUNT(*) OVER () AS full_count,
        updated_at
 FROM "entities"
 WHERE status = ANY ($1::status[])
-   OR (
+   AND (
             name ILIKE '%' || $2 || '%'
         OR ruc ILIKE '%' || $2 || '%'
         OR ci ILIKE '%' || $2 || '%'
@@ -154,37 +154,21 @@ func (q *Queries) GetEntityByCI(ctx context.Context, db DBTX, ci pgtype.Text) (*
 }
 
 const getEntityByID = `-- name: GetEntityByID :one
-SELECT id,
-       status,
-       name,
-       ruc,
-       ci,
-       created_at,
-       updated_at
+SELECT id, status, name, ci, ruc, created_at, updated_at
 FROM "entities"
 WHERE id = $1
 limit 1
 `
 
-type GetEntityByIDRow struct {
-	ID        pgtype.UUID
-	Status    Status
-	Name      string
-	Ruc       pgtype.Text
-	Ci        pgtype.Text
-	CreatedAt pgtype.Timestamp
-	UpdatedAt pgtype.Timestamp
-}
-
-func (q *Queries) GetEntityByID(ctx context.Context, db DBTX, entityID pgtype.UUID) (*GetEntityByIDRow, error) {
+func (q *Queries) GetEntityByID(ctx context.Context, db DBTX, entityID pgtype.UUID) (*Entity, error) {
 	row := db.QueryRow(ctx, getEntityByID, entityID)
-	var i GetEntityByIDRow
+	var i Entity
 	err := row.Scan(
 		&i.ID,
 		&i.Status,
 		&i.Name,
-		&i.Ruc,
 		&i.Ci,
+		&i.Ruc,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
