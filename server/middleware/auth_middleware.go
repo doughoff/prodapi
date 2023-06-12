@@ -4,13 +4,9 @@ import (
 	"encoding/json"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/storage/memory"
+	"github.com/hoffax/prodapi/server/types"
 	"time"
 )
-
-type SessionData struct {
-	UserId string
-	Roles  []string
-}
 
 func AuthMiddleware(store *memory.Storage) func(*fiber.Ctx) error {
 	return func(c *fiber.Ctx) error {
@@ -32,7 +28,7 @@ func AuthMiddleware(store *memory.Storage) func(*fiber.Ctx) error {
 			return fiber.NewError(fiber.StatusUnauthorized, "unauthenticated")
 		}
 
-		var sessionData SessionData
+		var sessionData types.SessionData
 
 		if err = json.Unmarshal(sessionDataBytes, &sessionData); err != nil {
 			return fiber.NewError(fiber.StatusInternalServerError, "failed to decode session data")
@@ -42,7 +38,7 @@ func AuthMiddleware(store *memory.Storage) func(*fiber.Ctx) error {
 		c.Locals("userId", sessionData.UserId)
 		c.Locals("roles", sessionData.Roles)
 
-		if err = store.Set(sessionID, sessionDataBytes, time.Hour*3); err != nil {
+		if err = store.Set(sessionID, sessionDataBytes, 72*time.Hour); err != nil {
 			return fiber.NewError(fiber.StatusInternalServerError, "failed to refresh session")
 		}
 

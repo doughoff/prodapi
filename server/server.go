@@ -6,12 +6,14 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/storage/memory"
 	"github.com/hoffax/prodapi/postgres"
 	"github.com/hoffax/prodapi/server/config"
 	"github.com/hoffax/prodapi/server/middleware"
 	"github.com/hoffax/prodapi/server/routes"
 	"github.com/hoffax/prodapi/server/types"
 	"log"
+	"time"
 )
 
 func Serve() {
@@ -31,12 +33,13 @@ func Serve() {
 	app.Use(logger.New())
 	//app.Get("/metrics", monitor.New())
 
-	//memoryStore := memory.New(memory.Config{
-	//	GCInterval: 5 * time.Second,
-	//})
-	//app.Use(middleware.AuthMiddleware(memoryStore))
+	memoryStore := memory.New(memory.Config{
+		GCInterval: 5 * time.Hour,
+	})
+	app.Use(middleware.AuthMiddleware(memoryStore))
 
-	routeManager := routes.NewRouteManager(app, db, dbWrapper, validate)
+	routeManager := routes.NewRouteManager(app, db, dbWrapper, validate, memoryStore)
+	routeManager.RegisterAuthRoutes()
 	routeManager.RegisterEntityRoutes()
 	routeManager.RegisterUserRoutes()
 
