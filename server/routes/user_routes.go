@@ -108,10 +108,10 @@ func (r *RouteManager) createUser(c *fiber.Ctx, tx *pgx.Tx) error {
 }
 
 type UpdateUserBody struct {
-	Name     string   `json:"name" validate:"omitempty,gte=3,lte=255"`
-	Email    string   `json:"email" validate:"omitempty,email"`
-	Roles    []string `json:"roles"`
-	Password string   `json:"password" validate:"gte=8,lte=255"`
+	Status postgres.Status `json:"status" validate:"required"`
+	Name   string          `json:"name" validate:"omitempty,gte=3,lte=255"`
+	Email  string          `json:"email" validate:"omitempty,email"`
+	Roles  []string        `json:"roles"`
 }
 
 func (r *RouteManager) updateUserByID(c *fiber.Ctx, tx *pgx.Tx) error {
@@ -121,12 +121,16 @@ func (r *RouteManager) updateUserByID(c *fiber.Ctx, tx *pgx.Tx) error {
 		return types.NewInvalidParamsError("invalid uuid on id url param")
 	}
 
-	body := new(CreateUserBody)
+	body := new(UpdateUserBody)
 	if err := c.BodyParser(body); err != nil {
 		return types.NewInvalidBodyError()
 	}
 	if err := r.validate.Struct(body); err != nil {
 		return err
+	}
+
+	if !body.Status.Valid() {
+		return types.NewInvalidParamsError("invalid value for status")
 	}
 
 	user, err := r.db.GetUserByEmail(c.Context(), *tx, body.Email)
@@ -141,10 +145,40 @@ func (r *RouteManager) updateUserByID(c *fiber.Ctx, tx *pgx.Tx) error {
 	}
 
 	user, err = r.db.UpdateUserByID(c.Context(), *tx, &postgres.UpdateUserByIDParams{
+		ID:     userID,
+		Status: body.Status,
+		Name:   body.Name,
+		Email:  body.Email,
+		Roles:  body.Roles,
+	})
+	if err != nil {
+		return err
+	}
+
+	return c.Status(fiber.StatusOK).JSON(dto.ToUserDTO(user))
+}
+
+type UpdateUserPasswordBody struct {
+	Password string `json:"password" validate:"required,gte=8,lte=255"`
+}
+
+func (r *RouteManager) updateUserPasswordByID(c *fiber.Ctx, tx *pgx.Tx) error {
+	idParam := c.Params("id")
+	userID := pgtype.UUID{}
+	if err := userID.Scan(idParam); err != nil {
+		return types.NewInvalidParamsError("invalid uuid on id url param")
+	}
+
+	body := new(UpdateUserPasswordBody)
+	if err := c.BodyParser(body); err != nil {
+		return types.NewInvalidBodyError()
+	}
+	if err := r.validate.Struct(body); err != nil {
+		return err
+	}
+
+	user, err := r.db.UpdateUserByID(c.Context(), *tx, &postgres.UpdateUserByIDParams{
 		ID:       userID,
-		Name:     body.Name,
-		Email:    body.Email,
-		Roles:    body.Roles,
 		Password: body.Password,
 	})
 	if err != nil {
@@ -191,6 +225,8 @@ func (r *RouteManager) RegisterUserRoutes() {
 	g.Get("/", r.dbWrapper.WithTransaction(r.getAllUsers))
 	g.Post("/", r.dbWrapper.WithTransaction(r.createUser))
 	g.Put("/:id", r.dbWrapper.WithTransaction(r.updateUserByID))
+	g.Put("/:id/reset_password", r.dbWrapper.WithTransaction(r.updateUserPasswordByID))
 	g.Get("/:id", r.dbWrapper.WithTransaction(r.getUserByID))
 	r.app.Get("/check_email/:email", r.dbWrapper.WithTransaction(r.getUserByEmail))
+
 }
