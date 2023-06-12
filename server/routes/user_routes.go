@@ -20,7 +20,7 @@ type GetAllUsersQuery struct {
 }
 
 func (r *RouteManager) getAllUsers(c *fiber.Ctx, tx *pgx.Tx) error {
-	params := new(GetAllEntitiesQuery)
+	params := new(getAllEntitiesQuery)
 	if err := c.QueryParser(params); err != nil {
 		return types.NewInvalidParamsError("invalid query params")
 	}
@@ -139,7 +139,7 @@ func (r *RouteManager) updateUserByID(c *fiber.Ctx, tx *pgx.Tx) error {
 			return err
 		}
 	} else {
-		if bytes.Equal(user.ID.Bytes[:], userID.Bytes[:]) {
+		if !bytes.Equal(user.ID.Bytes[:], userID.Bytes[:]) {
 			return types.NewInvalidParamsError("user with this email already exists")
 		}
 	}

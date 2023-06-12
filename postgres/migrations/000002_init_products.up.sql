@@ -10,7 +10,7 @@ CREATE TABLE "products"
     "barcode"           TEXT             NOT NULL UNIQUE,
     "unit"              UNIT             NOT NULL DEFAULT 'UNITS',
     "batch_control"     BOOLEAN          NOT NULL DEFAULT FALSE,
-    "conversion_factor" NUMERIC          NOT NULL DEFAULT 1,
+    "conversion_factor" INT              NOT NULL DEFAULT 1000,
     "created_at"        TIMESTAMP        NOT NULL DEFAULT NOW(),
     "updated_at"        TIMESTAMP        NOT NULL DEFAULT NOW()
 );

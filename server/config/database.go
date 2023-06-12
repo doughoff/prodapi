@@ -45,5 +45,17 @@ func NewPgxConn() *pgx.Conn {
 	}
 	conn.TypeMap().RegisterType(t)
 
+	t, err = conn.LoadType(context.Background(), "unit")
+	if err != nil {
+		panic(err)
+	}
+	conn.TypeMap().RegisterType(t)
+
+	t, err = conn.LoadType(context.Background(), "_unit")
+	if err != nil {
+		panic(err)
+	}
+	conn.TypeMap().RegisterType(t)
+
 	return conn
 }

@@ -5,13 +5,13 @@ endif
 
 db-migration:
 	@read -p "Enter migration name:" name;\
-		migrate create -ext sql -dir db/migrations $$name
+		migrate create -ext sql -dir postgres/migrations $$name
 
 db-migrate:
-	migrate -source ./db/migrations -database ${DB_URL} up
+	migrate -path postgres/migrations -database ${DB_URL} up
 
 db-rollback:
-	migrate -source ./db/migrations -database ${DB_URL} down
+	migrate -path postgres/migrations -database ${DB_URL} down
 
 build:
 	@go build -o bin/production-api

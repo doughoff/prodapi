@@ -12,7 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type GetAllEntitiesQuery struct {
+type getAllEntitiesQuery struct {
 	StatusOptions []string `query:"status"`
 	Search        string   `query:"search"`
 	Limit         int32    `query:"limit"`
@@ -20,7 +20,7 @@ type GetAllEntitiesQuery struct {
 }
 
 func (r *RouteManager) getAllEntities(c *fiber.Ctx, tx *pgx.Tx) error {
-	params := new(GetAllEntitiesQuery)
+	params := new(getAllEntitiesQuery)
 	if err := c.QueryParser(params); err != nil {
 		return types.NewInvalidParamsError("invalid query params")
 	}
@@ -69,14 +69,14 @@ func (r *RouteManager) getAllEntities(c *fiber.Ctx, tx *pgx.Tx) error {
 	})
 }
 
-type CreateEntityBody struct {
+type createEntityBody struct {
 	Name string `json:"name" validate:"required,gte=3,lte=255"`
 	RUC  string `json:"ruc"`
 	CI   string `json:"ci"`
 }
 
 func (r *RouteManager) createEntity(c *fiber.Ctx, tx *pgx.Tx) error {
-	body := new(CreateEntityBody)
+	body := new(createEntityBody)
 	if err := c.BodyParser(body); err != nil {
 		return types.NewInvalidBodyError()
 	}
@@ -124,7 +124,7 @@ func (r *RouteManager) createEntity(c *fiber.Ctx, tx *pgx.Tx) error {
 	return c.Status(fiber.StatusCreated).JSON(dto.ToEntityDTO(newEntity))
 }
 
-type UpdateEntityBody struct {
+type updateEntityBody struct {
 	Status postgres.Status `json:"status" validate:"required"`
 	Name   string          `json:"name" validate:"required,gte=3,lte=255"`
 	RUC    string          `json:"ruc"`
@@ -138,7 +138,7 @@ func (r *RouteManager) updateEntity(c *fiber.Ctx, tx *pgx.Tx) error {
 		return types.NewInvalidParamsError("invalid uuid on id url param")
 	}
 
-	body := new(UpdateEntityBody)
+	body := new(updateEntityBody)
 	if err := c.BodyParser(body); err != nil {
 		return types.NewInvalidBodyError()
 	}

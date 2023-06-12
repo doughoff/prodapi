@@ -191,7 +191,7 @@ type Product struct {
 	Barcode          string
 	Unit             Unit
 	BatchControl     bool
-	ConversionFactor pgtype.Numeric
+	ConversionFactor int32
 	CreatedAt        pgtype.Timestamp
 	UpdatedAt        pgtype.Timestamp
 }
