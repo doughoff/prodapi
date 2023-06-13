@@ -224,10 +224,12 @@ func (r *RouteManager) createRecipeRevision(c *fiber.Ctx, tx *pgx.Tx) error {
 	return c.Status(fiber.StatusCreated).JSON(recipeDTO)
 }
 
+// TODO: implement
 func (r *RouteManager) updateRecipeStatus(c *fiber.Ctx, tx *pgx.Tx) error {
 	return nil
 }
 
+// TODO: review
 func (r *RouteManager) getRecipeAndIngredientsByID(c *fiber.Ctx, tx *pgx.Tx, recipeID pgtype.UUID) (*dto.RecipeDTO, error) {
 	recipe, err := r.db.GetRecipeByID(c.Context(), *tx, recipeID)
 	if err != nil {
