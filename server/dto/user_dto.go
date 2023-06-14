@@ -7,13 +7,13 @@ import (
 )
 
 type UserDTO struct {
-	ID        pgtype.UUID
-	Status    postgres.Status
-	Email     string
-	Name      string
-	Roles     []string
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID        pgtype.UUID     `json:"id"`
+	Status    postgres.Status `json:"status"`
+	Email     string          `json:"email"`
+	Name      string          `json:"name"`
+	Roles     []string        `json:"roles"`
+	CreatedAt time.Time       `json:"createdAt"`
+	UpdatedAt time.Time       `json:"updatedAt"`
 }
 
 func ToUserDTO(user *postgres.User) *UserDTO {
