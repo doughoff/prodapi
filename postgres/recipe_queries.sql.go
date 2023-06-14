@@ -308,11 +308,11 @@ where recipe_group_id = $2
 `
 
 type SetRecipeStatusByGroupIDParams struct {
-	Stauts        Status
+	Status        Status
 	RecipeGroupID pgtype.UUID
 }
 
 func (q *Queries) SetRecipeStatusByGroupID(ctx context.Context, db DBTX, arg *SetRecipeStatusByGroupIDParams) error {
-	_, err := db.Exec(ctx, setRecipeStatusByGroupID, arg.Stauts, arg.RecipeGroupID)
+	_, err := db.Exec(ctx, setRecipeStatusByGroupID, arg.Status, arg.RecipeGroupID)
 	return err
 }

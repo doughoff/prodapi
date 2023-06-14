@@ -26,7 +26,7 @@ func (t *CustomTracer) TraceQueryEnd(_ context.Context, _ *pgx.Conn, data pgx.Tr
 func NewPgxConn() *pgx.Conn {
 	ctx := context.Background()
 	connConfig, err := pgx.ParseConfig(os.Getenv("DB_URL"))
-	connConfig.Tracer = &CustomTracer{}
+	//connConfig.Tracer = &CustomTracer{}
 	conn, err := pgx.ConnectConfig(ctx, connConfig)
 	if err != nil {
 		log.Fatalf("Unable to connect to database: %v\n", err)

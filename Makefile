@@ -3,7 +3,7 @@ ifneq (,$(wildcard ./.env))
     export
 endif
 
-db-migration:
+db-create-migration:
 	@read -p "Enter migration name:" name;\
 		migrate create -ext sql -dir postgres/migrations $$name
 

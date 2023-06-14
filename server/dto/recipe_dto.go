@@ -14,6 +14,9 @@ type RecipeDTO struct {
 	Revision      int32           `json:"revision"`
 	IsCurrent     bool            `json:"isCurrent"`
 
+	CreatedByUserID   pgtype.UUID `json:"createdByUserId"`
+	CreatedByUserName string      `json:"createdByUserName"`
+
 	Ingredients []*RecipeIngredientDTO `json:"ingredients"`
 	CreatedAt   time.Time              `json:"createdAt"`
 }

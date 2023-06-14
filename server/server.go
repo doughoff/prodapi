@@ -46,6 +46,7 @@ func Serve() {
 	routeManager.RegisterEntityRoutes()
 	routeManager.RegisterUserRoutes()
 	routeManager.RegisterProductRoutes()
+	routeManager.RegisterRecipeRoutes()
 
 	err = app.Listen(":3088")
 	if err != nil {

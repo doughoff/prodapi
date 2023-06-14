@@ -51,14 +51,16 @@ func (r *RouteManager) getAllRecipes(c *fiber.Ctx, tx *pgx.Tx) error {
 	hashMap := make(map[pgtype.UUID]*dto.RecipeDTO)
 	for i := range resultRecipes {
 		resultRow := &dto.RecipeDTO{
-			RecipeID:      recipes[i].RecipeID,
-			RecipeGroupID: recipes[i].RecipeGroupID,
-			Status:        recipes[i].Status,
-			Name:          recipes[i].Name,
-			Revision:      recipes[i].Revision,
-			IsCurrent:     recipes[i].IsCurrent,
-			CreatedAt:     recipes[i].CreatedAt.Time,
-			Ingredients:   make([]*dto.RecipeIngredientDTO, 0),
+			RecipeID:          recipes[i].RecipeID,
+			RecipeGroupID:     recipes[i].RecipeGroupID,
+			Status:            recipes[i].Status,
+			Name:              recipes[i].Name,
+			Revision:          recipes[i].Revision,
+			IsCurrent:         recipes[i].IsCurrent,
+			CreatedByUserID:   recipes[i].CreatedByUserID,
+			CreatedByUserName: recipes[i].CreatedByUserName,
+			CreatedAt:         recipes[i].CreatedAt.Time,
+			Ingredients:       make([]*dto.RecipeIngredientDTO, 0),
 		}
 
 		recipeIds = append(recipeIds, resultRow.RecipeID)
@@ -72,9 +74,9 @@ func (r *RouteManager) getAllRecipes(c *fiber.Ctx, tx *pgx.Tx) error {
 	}
 
 	for _, ing := range ingredients {
-		if _, ok := hashMap[ing.RecipeID]; !ok {
-			IngSlice := &hashMap[ing.RecipeID].Ingredients
-			*IngSlice = append(*IngSlice, dto.ToRecipeIngredientDTO(ing))
+		if _, ok := hashMap[ing.RecipeID]; ok {
+			r := hashMap[ing.RecipeID]
+			r.Ingredients = append(r.Ingredients, dto.ToRecipeIngredientDTO(ing))
 		}
 	}
 
@@ -124,14 +126,16 @@ func (r *RouteManager) getRecipeByGroupID(c *fiber.Ctx, tx *pgx.Tx) error {
 	hashMap := make(map[pgtype.UUID]*dto.RecipeDTO)
 	for i := range resultRecipes {
 		resultRow := &dto.RecipeDTO{
-			RecipeID:      recipes[i].RecipeID,
-			RecipeGroupID: recipes[i].RecipeGroupID,
-			Status:        recipes[i].Status,
-			Name:          recipes[i].Name,
-			Revision:      recipes[i].Revision,
-			IsCurrent:     recipes[i].IsCurrent,
-			CreatedAt:     recipes[i].CreatedAt.Time,
-			Ingredients:   make([]*dto.RecipeIngredientDTO, 0),
+			RecipeID:          recipes[i].RecipeID,
+			RecipeGroupID:     recipes[i].RecipeGroupID,
+			Status:            recipes[i].Status,
+			Name:              recipes[i].Name,
+			Revision:          recipes[i].Revision,
+			IsCurrent:         recipes[i].IsCurrent,
+			CreatedByUserID:   recipes[i].CreatedByUserID,
+			CreatedByUserName: recipes[i].CreatedByUserName,
+			CreatedAt:         recipes[i].CreatedAt.Time,
+			Ingredients:       make([]*dto.RecipeIngredientDTO, 0),
 		}
 
 		recipeIds = append(recipeIds, resultRow.RecipeID)
@@ -145,7 +149,7 @@ func (r *RouteManager) getRecipeByGroupID(c *fiber.Ctx, tx *pgx.Tx) error {
 	}
 
 	for _, ing := range ingredients {
-		if _, ok := hashMap[ing.RecipeID]; !ok {
+		if _, ok := hashMap[ing.RecipeID]; ok {
 			IngSlice := &hashMap[ing.RecipeID].Ingredients
 			*IngSlice = append(*IngSlice, dto.ToRecipeIngredientDTO(ing))
 		}
@@ -157,8 +161,8 @@ func (r *RouteManager) getRecipeByGroupID(c *fiber.Ctx, tx *pgx.Tx) error {
 type CreateRecipeBody struct {
 	Name        string `json:"name" validate:"required,gte=3,lte=255"`
 	Ingredients []struct {
-		ProductID pgtype.UUID `json:"productId" validate:"required"`
-		Quantity  int32       `json:"quantity" validate:"required"`
+		ProductID *pgtype.UUID `json:"productId" validate:"required"`
+		Quantity  int32        `json:"quantity" validate:"required"`
 	} `json:"ingredients" validate:"required,dive,required"`
 }
 
@@ -167,6 +171,10 @@ func (r *RouteManager) createRecipe(c *fiber.Ctx, tx *pgx.Tx) error {
 	body := &CreateRecipeBody{}
 	if err := c.BodyParser(body); err != nil {
 		return types.NewInvalidParamsError("invalid body")
+	}
+
+	if err := r.validate.Struct(body); err != nil {
+		return err
 	}
 
 	recipeID, err := r.db.CreateRecipe(c.Context(), *tx, &postgres.CreateRecipeParams{
@@ -179,9 +187,12 @@ func (r *RouteManager) createRecipe(c *fiber.Ctx, tx *pgx.Tx) error {
 
 	ingParams := make([]*postgres.CreateRecipeIngredientsParams, 0)
 	for _, ing := range body.Ingredients {
+		if ing.ProductID == nil {
+			return types.NewInvalidParamsError("invalid product id")
+		}
 		ingParams = append(ingParams, &postgres.CreateRecipeIngredientsParams{
 			RecipeID:  recipeID,
-			ProductID: ing.ProductID,
+			ProductID: *ing.ProductID,
 			Quantity:  ing.Quantity,
 		})
 	}
@@ -199,6 +210,11 @@ func (r *RouteManager) createRecipe(c *fiber.Ctx, tx *pgx.Tx) error {
 }
 
 type CreateRecipeRevisionBody struct {
+	Name        string `json:"name" validate:"required,gte=3,lte=255"`
+	Ingredients []struct {
+		ProductID *pgtype.UUID `json:"productId" validate:"required"`
+		Quantity  int32        `json:"quantity" validate:"required"`
+	} `json:"ingredients" validate:"required,dive,required"`
 }
 
 func (r *RouteManager) createRecipeRevision(c *fiber.Ctx, tx *pgx.Tx) error {
@@ -207,16 +223,57 @@ func (r *RouteManager) createRecipeRevision(c *fiber.Ctx, tx *pgx.Tx) error {
 	if err := c.BodyParser(body); err != nil {
 		return types.NewInvalidParamsError("invalid body")
 	}
+	if err := r.validate.Struct(body); err != nil {
+		return err
+	}
 
-	recipeID, err := r.db.CreateRecipe(c.Context(), *tx, &postgres.CreateRecipeParams{
+	idParam := c.Params("id")
+	recipeID := pgtype.UUID{}
+	if err := recipeID.Scan(idParam); err != nil {
+		return types.NewInvalidParamsError("invalid uuid on id url param")
+	}
+
+	prevRecipe, err := r.db.GetRecipeByID(c.Context(), *tx, recipeID)
+	if err != nil {
+		return err
+	}
+
+	if !prevRecipe.IsCurrent {
+		return types.NewInvalidParamsError("recipe is not current")
+	}
+
+	_, err = r.db.SetCurrentFalse(c.Context(), *tx, recipeID)
+	if err != nil {
+		return err
+	}
+
+	recipeRevisionID, err := r.db.CreateRecipeRevision(c.Context(), *tx, &postgres.CreateRecipeRevisionParams{
 		Name:            body.Name,
+		Revision:        prevRecipe.Revision + 1,
+		RecipeGroupID:   prevRecipe.RecipeGroupID,
 		CreatedByUserID: userID,
 	})
 	if err != nil {
 		return err
 	}
 
-	recipeDTO, err := r.getRecipeAndIngredientsByID(c, tx, recipeID)
+	ingParams := make([]*postgres.CreateRecipeIngredientsParams, 0)
+	for _, ing := range body.Ingredients {
+		if ing.ProductID == nil {
+			return types.NewInvalidParamsError("invalid product id")
+		}
+		ingParams = append(ingParams, &postgres.CreateRecipeIngredientsParams{
+			RecipeID:  recipeRevisionID,
+			ProductID: *ing.ProductID,
+			Quantity:  ing.Quantity,
+		})
+	}
+
+	if _, err := r.db.CreateRecipeIngredients(c.Context(), *tx, ingParams); err != nil {
+		return err
+	}
+
+	recipeDTO, err := r.getRecipeAndIngredientsByID(c, tx, recipeRevisionID)
 	if err != nil {
 		return err
 	}
@@ -224,12 +281,40 @@ func (r *RouteManager) createRecipeRevision(c *fiber.Ctx, tx *pgx.Tx) error {
 	return c.Status(fiber.StatusCreated).JSON(recipeDTO)
 }
 
-// TODO: implement
-func (r *RouteManager) updateRecipeStatus(c *fiber.Ctx, tx *pgx.Tx) error {
-	return nil
+type UpdateRecipeBody struct {
+	Status postgres.Status `json:"status" validate:"required"`
 }
 
-// TODO: review
+func (r *RouteManager) updateRecipeStatus(c *fiber.Ctx, tx *pgx.Tx) error {
+	body := &UpdateRecipeBody{}
+	if err := c.BodyParser(body); err != nil {
+		return types.NewInvalidParamsError("invalid body")
+	}
+	if err := r.validate.Struct(body); err != nil {
+		return err
+	}
+
+	idParam := c.Params("id")
+	groupID := pgtype.UUID{}
+	if err := groupID.Scan(idParam); err != nil {
+		return types.NewInvalidParamsError("invalid uuid on id url param")
+	}
+
+	if !body.Status.Valid() {
+		return types.NewInvalidParamsError("invalid status")
+	}
+
+	err := r.db.SetRecipeStatusByGroupID(c.Context(), *tx, &postgres.SetRecipeStatusByGroupIDParams{
+		Status:        body.Status,
+		RecipeGroupID: groupID,
+	})
+	if err != nil {
+		return err
+	}
+
+	return c.Status(fiber.StatusNoContent).Send(nil)
+}
+
 func (r *RouteManager) getRecipeAndIngredientsByID(c *fiber.Ctx, tx *pgx.Tx, recipeID pgtype.UUID) (*dto.RecipeDTO, error) {
 	recipe, err := r.db.GetRecipeByID(c.Context(), *tx, recipeID)
 	if err != nil {
@@ -240,14 +325,16 @@ func (r *RouteManager) getRecipeAndIngredientsByID(c *fiber.Ctx, tx *pgx.Tx, rec
 	}
 
 	recipeDTO := &dto.RecipeDTO{
-		RecipeID:      recipe.RecipeID,
-		RecipeGroupID: recipe.RecipeGroupID,
-		Status:        recipe.Status,
-		Name:          recipe.Name,
-		Revision:      recipe.Revision,
-		IsCurrent:     recipe.IsCurrent,
-		CreatedAt:     recipe.CreatedAt.Time,
-		Ingredients:   make([]*dto.RecipeIngredientDTO, 0),
+		RecipeID:          recipe.RecipeID,
+		RecipeGroupID:     recipe.RecipeGroupID,
+		Status:            recipe.Status,
+		Name:              recipe.Name,
+		Revision:          recipe.Revision,
+		IsCurrent:         recipe.IsCurrent,
+		CreatedByUserID:   recipe.CreatedByUserID,
+		CreatedByUserName: recipe.CreatedByUserName,
+		CreatedAt:         recipe.CreatedAt.Time,
+		Ingredients:       make([]*dto.RecipeIngredientDTO, 0),
 	}
 
 	ingredients, err := r.db.GetRecipeIngredients(c.Context(), *tx, []pgtype.UUID{recipe.RecipeID})

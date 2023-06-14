@@ -82,6 +82,6 @@ returning recipe_id;
 
 -- name: SetRecipeStatusByGroupID :exec
 update recipes
-set status = @stauts
+set status = @status
 where recipe_group_id = @recipe_group_id;
 ;
