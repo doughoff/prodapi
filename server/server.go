@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/storage/memory"
 	"github.com/hoffax/prodapi/postgres"
@@ -32,6 +33,8 @@ func Serve() {
 
 	app.Use(logger.New())
 	//app.Get("/metrics", monitor.New())
+
+	app.Use(cors.New())
 
 	memoryStore := memory.New(memory.Config{
 		GCInterval: 5 * time.Hour,
