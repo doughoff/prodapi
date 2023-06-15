@@ -1,19 +1,19 @@
-BEGIN;
-DROP TYPE IF EXISTS UNIT;
-CREATE TYPE UNIT AS ENUM ('KG', 'L', 'UNITS', 'OTHER');
+begin;
+drop type if exists unit;
+create type unit as enum ('KG', 'L', 'UNITS', 'OTHER');
 
-CREATE TABLE "products"
+create table "products"
 (
-    "id"                UUID PRIMARY KEY NOT NULL DEFAULT uuid_generate_v4(),
-    "status"            STATUS           NOT NULL DEFAULT 'ACTIVE',
-    "name"              TEXT             NOT NULL,
-    "barcode"           TEXT             NOT NULL UNIQUE,
-    "unit"              UNIT             NOT NULL DEFAULT 'UNITS',
-    "batch_control"     BOOLEAN          NOT NULL DEFAULT FALSE,
-    "conversion_factor" INT              NOT NULL DEFAULT 1000,
-    "created_at"        TIMESTAMP        NOT NULL DEFAULT NOW(),
-    "updated_at"        TIMESTAMP        NOT NULL DEFAULT NOW()
+    "id"                uuid primary key not null default uuid_generate_v4(),
+    "status"            status           not null default 'ACTIVE',
+    "name"              text             not null,
+    "barcode"           text             not null unique,
+    "unit"              unit             not null default 'UNITS',
+    "batch_control"     boolean          not null default false,
+    "conversion_factor" bigint           not null default 1000,
+    "created_at"        timestamp        not null default now(),
+    "updated_at"        timestamp        not null default now()
 );
 
-CREATE INDEX "products_status" ON "products" ("status");
-COMMIT;
+create index "products_status" on "products" ("status");
+commit;

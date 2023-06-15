@@ -13,9 +13,9 @@ type ProductDTO struct {
 	Barcode          string          `json:"barcode"`
 	Unit             postgres.Unit   `json:"unit"`
 	BatchControl     bool            `json:"batchControl"`
-	ConversionFactor int32           `json:"conversionFactor"`
-	Stock            int             `json:"stock"`
-	AverageCost      int             `json:"averageCost"`
+	ConversionFactor int64           `json:"conversionFactor"`
+	Stock            float64         `json:"stock"`
+	AverageCost      int64           `json:"averageCost"`
 	CreatedAt        time.Time       `json:"createdAt"`
 	UpdatedAt        time.Time       `json:"updatedAt"`
 }

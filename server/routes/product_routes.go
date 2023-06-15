@@ -106,7 +106,7 @@ type createProductBody struct {
 	Name             string        `json:"name" validate:"required,min=1,max=255"`
 	Unit             postgres.Unit `json:"unit" validate:"required,min=1,max=255"`
 	Barcode          string        `json:"barcode" validate:"required,min=1,max=100"`
-	ConversionFactor int32         `json:"conversionFactor" validate:"required"`
+	ConversionFactor int64         `json:"conversionFactor" validate:"required"`
 	BatchControl     bool          `json:"batchControl"`
 }
 
@@ -120,7 +120,7 @@ func (r *RouteManager) createProduct(c *fiber.Ctx, tx *pgx.Tx) error {
 	}
 
 	if !body.Unit.Valid() {
-		return types.NewInvalidParamsError("invalid value for status")
+		return types.NewInvalidParamsError("invalid value for unit type")
 	}
 
 	_, err := r.db.GetProductByBarcode(c.Context(), *tx, body.Barcode)
@@ -151,7 +151,7 @@ type updateProductBody struct {
 	Name             string          `json:"name" validate:"required,min=1,max=255"`
 	Unit             postgres.Unit   `json:"unit" validate:"required,min=1,max=255"`
 	Barcode          string          `json:"barcode" validate:"required,min=1,max=100"`
-	ConversionFactor int32           `json:"conversionFactor" validate:"required"`
+	ConversionFactor int64           `json:"conversionFactor" validate:"required"`
 	BatchControl     bool            `json:"batchControl"`
 }
 

@@ -191,7 +191,7 @@ type Product struct {
 	Barcode          string
 	Unit             Unit
 	BatchControl     bool
-	ConversionFactor int32
+	ConversionFactor int64
 	CreatedAt        pgtype.Timestamp
 	UpdatedAt        pgtype.Timestamp
 }
@@ -211,7 +211,7 @@ type RecipeIngredient struct {
 	ID        pgtype.UUID
 	RecipeID  pgtype.UUID
 	ProductID pgtype.UUID
-	Quantity  int32
+	Quantity  int64
 }
 
 type StockMovement struct {
@@ -230,8 +230,8 @@ type StockMovementItem struct {
 	ID              pgtype.UUID
 	StockMovementID pgtype.UUID
 	ProductID       pgtype.UUID
-	Quantity        int32
-	Price           int32
+	Quantity        int64
+	Price           int64
 	Batch           pgtype.Text
 	CreatedAt       pgtype.Timestamp
 	UpdatedAt       pgtype.Timestamp

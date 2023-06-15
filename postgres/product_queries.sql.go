@@ -22,7 +22,7 @@ type CreateProductParams struct {
 	Barcode          string
 	Unit             Unit
 	BatchControl     bool
-	ConversionFactor int32
+	ConversionFactor int64
 }
 
 func (q *Queries) CreateProduct(ctx context.Context, db DBTX, arg *CreateProductParams) (*Product, error) {
@@ -124,7 +124,7 @@ type GetProductsRow struct {
 	Barcode          string
 	Unit             Unit
 	BatchControl     bool
-	ConversionFactor int32
+	ConversionFactor int64
 	CreatedAt        pgtype.Timestamp
 	UpdatedAt        pgtype.Timestamp
 }
@@ -183,7 +183,7 @@ type UpdateProductByIDParams struct {
 	Barcode          string
 	Unit             Unit
 	BatchControl     bool
-	ConversionFactor int32
+	ConversionFactor int64
 	ID               pgtype.UUID
 }
 

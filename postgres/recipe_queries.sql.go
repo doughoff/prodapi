@@ -33,7 +33,7 @@ func (q *Queries) CreateRecipe(ctx context.Context, db DBTX, arg *CreateRecipePa
 type CreateRecipeIngredientsParams struct {
 	RecipeID  pgtype.UUID
 	ProductID pgtype.UUID
-	Quantity  int32
+	Quantity  int64
 }
 
 const createRecipeRevision = `-- name: CreateRecipeRevision :one
@@ -125,7 +125,7 @@ type GetRecipeIngredientsRow struct {
 	RecipeID    pgtype.UUID
 	ProductID   pgtype.UUID
 	ProductName string
-	Quantity    int32
+	Quantity    int64
 }
 
 func (q *Queries) GetRecipeIngredients(ctx context.Context, db DBTX, recipeIds []pgtype.UUID) ([]*GetRecipeIngredientsRow, error) {

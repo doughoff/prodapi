@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS "recipe_ingredients"
     "id"                UUID PRIMARY KEY NOT NULL DEFAULT uuid_generate_v4(),
     "recipe_id"         UUID             NOT NULL,
     "product_id"        UUID             NOT NULL,
-    "quantity"          INTEGER          NOT NULL,
+    "quantity"          BIGINT          NOT NULL,
     CONSTRAINT "fk_recipe_ingredient_recipe"
         FOREIGN KEY("recipe_id")
             REFERENCES "recipes"("recipe_id"),

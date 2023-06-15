@@ -43,8 +43,8 @@ func (q *Queries) CreateStockMovement(ctx context.Context, db DBTX, arg *CreateS
 type CreateStockMovementItemsParams struct {
 	StockMovementID pgtype.UUID
 	ProductID       pgtype.UUID
-	Quantity        int32
-	Price           int32
+	Quantity        int64
+	Price           int64
 	Batch           pgtype.Text
 }
 
@@ -117,8 +117,8 @@ type GetStockMovementItemsRow struct {
 	StockMovementID pgtype.UUID
 	ProductID       pgtype.UUID
 	ProductName     pgtype.Text
-	Quantity        int32
-	Price           int32
+	Quantity        int64
+	Price           int64
 	Batch           pgtype.Text
 	CreatedAt       pgtype.Timestamp
 	UpdatedAt       pgtype.Timestamp
