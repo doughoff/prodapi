@@ -42,3 +42,39 @@ func (r iteratorForCreateRecipeIngredients) Err() error {
 func (q *Queries) CreateRecipeIngredients(ctx context.Context, db DBTX, arg []*CreateRecipeIngredientsParams) (int64, error) {
 	return db.CopyFrom(ctx, []string{"recipe_ingredients"}, []string{"recipe_id", "product_id", "quantity"}, &iteratorForCreateRecipeIngredients{rows: arg})
 }
+
+// iteratorForCreateStockMovementItems implements pgx.CopyFromSource.
+type iteratorForCreateStockMovementItems struct {
+	rows                 []*CreateStockMovementItemsParams
+	skippedFirstNextCall bool
+}
+
+func (r *iteratorForCreateStockMovementItems) Next() bool {
+	if len(r.rows) == 0 {
+		return false
+	}
+	if !r.skippedFirstNextCall {
+		r.skippedFirstNextCall = true
+		return true
+	}
+	r.rows = r.rows[1:]
+	return len(r.rows) > 0
+}
+
+func (r iteratorForCreateStockMovementItems) Values() ([]interface{}, error) {
+	return []interface{}{
+		r.rows[0].StockMovementID,
+		r.rows[0].ProductID,
+		r.rows[0].Quantity,
+		r.rows[0].Price,
+		r.rows[0].Batch,
+	}, nil
+}
+
+func (r iteratorForCreateStockMovementItems) Err() error {
+	return nil
+}
+
+func (q *Queries) CreateStockMovementItems(ctx context.Context, db DBTX, arg []*CreateStockMovementItemsParams) (int64, error) {
+	return db.CopyFrom(ctx, []string{"stock_movement_items"}, []string{"stock_movement_id", "product_id", "quantity", "price", "batch"}, &iteratorForCreateStockMovementItems{rows: arg})
+}
