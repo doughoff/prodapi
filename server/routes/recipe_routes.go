@@ -169,10 +169,10 @@ func (r *RouteManager) getRecipeByGroupID(c *fiber.Ctx, tx *pgx.Tx) error {
 type CreateRecipeBody struct {
 	Name             string      `json:"name" validate:"required,gte=3,lte=255"`
 	ProductID        pgtype.UUID `json:"productId" validate:"required"`
-	ProducedQuantity pgtype.UUID `json:"producedQuantity" validate:"required,gte=1"`
+	ProducedQuantity float64     `json:"producedQuantity" validate:"required,gte=1"`
 	Ingredients      []struct {
 		ProductID *pgtype.UUID `json:"productId" validate:"required"`
-		Quantity  int64        `json:"quantity" validate:"required"`
+		Quantity  float64      `json:"quantity" validate:"required"`
 	} `json:"ingredients" validate:"required,dive,required"`
 }
 
@@ -187,9 +187,15 @@ func (r *RouteManager) createRecipe(c *fiber.Ctx, tx *pgx.Tx) error {
 		return err
 	}
 
+	if !body.ProductID.Valid {
+		return types.NewInvalidParamsError("invalid productID on reciped body")
+	}
+
 	recipeID, err := r.db.CreateRecipe(c.Context(), *tx, &postgres.CreateRecipeParams{
-		Name:            body.Name,
-		CreatedByUserID: userID,
+		Name:             body.Name,
+		ProductID:        body.ProductID,
+		ProducedQuantity: int64(body.ProducedQuantity * 1000),
+		CreatedByUserID:  userID,
 	})
 	if err != nil {
 		return err
@@ -203,7 +209,7 @@ func (r *RouteManager) createRecipe(c *fiber.Ctx, tx *pgx.Tx) error {
 		ingParams = append(ingParams, &postgres.CreateRecipeIngredientsParams{
 			RecipeID:  recipeID,
 			ProductID: *ing.ProductID,
-			Quantity:  ing.Quantity * 1000,
+			Quantity:  int64(ing.Quantity * 1000),
 		})
 	}
 
@@ -220,16 +226,18 @@ func (r *RouteManager) createRecipe(c *fiber.Ctx, tx *pgx.Tx) error {
 }
 
 type CreateRecipeRevisionBody struct {
-	Name        string `json:"name" validate:"required,gte=3,lte=255"`
-	Ingredients []struct {
+	Name             string      `json:"name" validate:"required,gte=3,lte=255"`
+	ProductID        pgtype.UUID `json:"productId" validate:"required"`
+	ProducedQuantity float64     `json:"producedQuantity" validate:"required,gte=1"`
+	Ingredients      []struct {
 		ProductID *pgtype.UUID `json:"productId" validate:"required"`
-		Quantity  int64        `json:"quantity" validate:"required"`
+		Quantity  float64      `json:"quantity" validate:"required"`
 	} `json:"ingredients" validate:"required,dive,required"`
 }
 
 func (r *RouteManager) createRecipeRevision(c *fiber.Ctx, tx *pgx.Tx) error {
 	userID := c.Locals("userId").(pgtype.UUID)
-	body := &CreateRecipeBody{}
+	body := &CreateRecipeRevisionBody{}
 	if err := c.BodyParser(body); err != nil {
 		return types.NewInvalidParamsError("invalid body")
 	}
@@ -258,10 +266,12 @@ func (r *RouteManager) createRecipeRevision(c *fiber.Ctx, tx *pgx.Tx) error {
 	}
 
 	recipeRevisionID, err := r.db.CreateRecipeRevision(c.Context(), *tx, &postgres.CreateRecipeRevisionParams{
-		Name:            body.Name,
-		Revision:        prevRecipe.Revision + 1,
-		RecipeGroupID:   prevRecipe.RecipeGroupID,
-		CreatedByUserID: userID,
+		Name:             body.Name,
+		Revision:         prevRecipe.Revision + 1,
+		ProductID:        body.ProductID,
+		ProducedQuantity: int64(body.ProducedQuantity * 1000),
+		RecipeGroupID:    prevRecipe.RecipeGroupID,
+		CreatedByUserID:  userID,
 	})
 	if err != nil {
 		return err
@@ -275,7 +285,7 @@ func (r *RouteManager) createRecipeRevision(c *fiber.Ctx, tx *pgx.Tx) error {
 		ingParams = append(ingParams, &postgres.CreateRecipeIngredientsParams{
 			RecipeID:  recipeRevisionID,
 			ProductID: *ing.ProductID,
-			Quantity:  ing.Quantity,
+			Quantity:  int64(ing.Quantity * 1000),
 		})
 	}
 

@@ -16,7 +16,11 @@ CREATE TABLE IF NOT EXISTS "recipes"
 
     CONSTRAINT "fk_created_by_user"
         FOREIGN KEY ("created_by_user_id")
-            REFERENCES "users" ("id")
+            REFERENCES "users" ("id"),
+    CONSTRAINT "fk_recipe_produced_product_id"
+        FOREIGN KEY ("product_id")
+            REFERENCES "products" ("id")
+
 );
 
 CREATE INDEX "recipe_status" ON "recipes" ("status");

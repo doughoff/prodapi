@@ -204,6 +204,7 @@ from recipes r
          join users u on u.id = r.created_by_user_id
          join products p on r.product_id = p.id
 where r.status = any ($1::status[])
+  and is_current = true
   and (
             r.name ilike '%' || $2 || '%'
         or p.name ilike '%' || $2 || '%'
