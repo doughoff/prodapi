@@ -12,19 +12,28 @@ import (
 )
 
 const createRecipe = `-- name: CreateRecipe :one
-insert into recipes(name, created_by_user_id)
+insert into recipes(name, product_id, produced_quantity, created_by_user_id)
 values ($1,
-        $2)
+        $2,
+        $3,
+        $4)
 returning recipe_id
 `
 
 type CreateRecipeParams struct {
-	Name            string
-	CreatedByUserID pgtype.UUID
+	Name             string
+	ProductID        pgtype.UUID
+	ProducedQuantity int64
+	CreatedByUserID  pgtype.UUID
 }
 
 func (q *Queries) CreateRecipe(ctx context.Context, db DBTX, arg *CreateRecipeParams) (pgtype.UUID, error) {
-	row := db.QueryRow(ctx, createRecipe, arg.Name, arg.CreatedByUserID)
+	row := db.QueryRow(ctx, createRecipe,
+		arg.Name,
+		arg.ProductID,
+		arg.ProducedQuantity,
+		arg.CreatedByUserID,
+	)
 	var recipe_id pgtype.UUID
 	err := row.Scan(&recipe_id)
 	return recipe_id, err
@@ -37,25 +46,31 @@ type CreateRecipeIngredientsParams struct {
 }
 
 const createRecipeRevision = `-- name: CreateRecipeRevision :one
-insert into recipes(name, recipe_group_id, revision, created_by_user_id)
+insert into recipes(name, recipe_group_id, product_id, produced_quantity, revision, created_by_user_id)
 values ($1,
         $2,
         $3,
-        $4)
+        $4,
+        $5,
+        $6)
 returning recipe_id
 `
 
 type CreateRecipeRevisionParams struct {
-	Name            string
-	RecipeGroupID   pgtype.UUID
-	Revision        int32
-	CreatedByUserID pgtype.UUID
+	Name             string
+	RecipeGroupID    pgtype.UUID
+	ProductID        pgtype.UUID
+	ProducedQuantity int64
+	Revision         int32
+	CreatedByUserID  pgtype.UUID
 }
 
 func (q *Queries) CreateRecipeRevision(ctx context.Context, db DBTX, arg *CreateRecipeRevisionParams) (pgtype.UUID, error) {
 	row := db.QueryRow(ctx, createRecipeRevision,
 		arg.Name,
 		arg.RecipeGroupID,
+		arg.ProductID,
+		arg.ProducedQuantity,
 		arg.Revision,
 		arg.CreatedByUserID,
 	)
@@ -68,14 +83,19 @@ const getRecipeByID = `-- name: GetRecipeByID :one
 select r.recipe_id,
        r.recipe_group_id,
        r.name,
+       r.product_id         as product_id,
+       p.name               as product_name,
+       p.unit               as product_unit,
+       r.produced_quantity,
        r.status,
        r.revision,
        r.is_current,
        r.created_by_user_id,
-       coalesce(u.name, '') as created_by_user_name,
+       u.name as created_by_user_name,
        r.created_at
 from recipes r
-         left  join users u on u.id = r.created_by_user_id
+         join users u on u.id = r.created_by_user_id
+         join products p on r.product_id = p.id
 where r.recipe_id = $1
 limit 1
 `
@@ -84,6 +104,10 @@ type GetRecipeByIDRow struct {
 	RecipeID          pgtype.UUID
 	RecipeGroupID     pgtype.UUID
 	Name              string
+	ProductID         pgtype.UUID
+	ProductName       string
+	ProductUnit       Unit
+	ProducedQuantity  int64
 	Status            Status
 	Revision          int32
 	IsCurrent         bool
@@ -99,6 +123,10 @@ func (q *Queries) GetRecipeByID(ctx context.Context, db DBTX, recipeID pgtype.UU
 		&i.RecipeID,
 		&i.RecipeGroupID,
 		&i.Name,
+		&i.ProductID,
+		&i.ProductName,
+		&i.ProductUnit,
+		&i.ProducedQuantity,
 		&i.Status,
 		&i.Revision,
 		&i.IsCurrent,
@@ -114,6 +142,7 @@ select ri.id,
        ri.recipe_id,
        ri.product_id,
        p.name as product_name,
+       p.unit as product_unit,
        ri.quantity
 from recipe_ingredients ri
          join products p on ri.product_id = p.id
@@ -125,6 +154,7 @@ type GetRecipeIngredientsRow struct {
 	RecipeID    pgtype.UUID
 	ProductID   pgtype.UUID
 	ProductName string
+	ProductUnit Unit
 	Quantity    int64
 }
 
@@ -142,6 +172,7 @@ func (q *Queries) GetRecipeIngredients(ctx context.Context, db DBTX, recipeIds [
 			&i.RecipeID,
 			&i.ProductID,
 			&i.ProductName,
+			&i.ProductUnit,
 			&i.Quantity,
 		); err != nil {
 			return nil, err
@@ -160,15 +191,23 @@ select count(*) over () as full_count,
        r.recipe_group_id,
        r.status,
        r.name,
+       r.product_id     as product_id,
+       p.name           as product_name,
+       p.unit           as product_unit,
+       r.produced_quantity,
        r.revision,
        r.is_current,
        r.created_by_user_id,
-       u.name as created_by_user_name,
+       u.name           as created_by_user_name,
        r.created_at
 from recipes r
-    join users u on u.id = r.created_by_user_id
+         join users u on u.id = r.created_by_user_id
+         join products p on r.product_id = p.id
 where r.status = any ($1::status[])
-  and r.name ilike '%' || $2 || '%'
+  and (
+            r.name ilike '%' || $2 || '%'
+        or p.name ilike '%' || $2 || '%'
+    )
 order by r.created_at desc
 limit $4 offset $3
 `
@@ -186,6 +225,10 @@ type GetRecipesRow struct {
 	RecipeGroupID     pgtype.UUID
 	Status            Status
 	Name              string
+	ProductID         pgtype.UUID
+	ProductName       string
+	ProductUnit       Unit
+	ProducedQuantity  int64
 	Revision          int32
 	IsCurrent         bool
 	CreatedByUserID   pgtype.UUID
@@ -213,6 +256,10 @@ func (q *Queries) GetRecipes(ctx context.Context, db DBTX, arg *GetRecipesParams
 			&i.RecipeGroupID,
 			&i.Status,
 			&i.Name,
+			&i.ProductID,
+			&i.ProductName,
+			&i.ProductUnit,
+			&i.ProducedQuantity,
 			&i.Revision,
 			&i.IsCurrent,
 			&i.CreatedByUserID,
@@ -233,14 +280,19 @@ const getRecipesByGroupID = `-- name: GetRecipesByGroupID :many
 select r.recipe_id,
        r.recipe_group_id,
        r.name,
+       r.product_id as product_id,
+       p.name       as product_name,
+       p.unit       as product_unit,
+       r.produced_quantity,
        r.status,
        r.revision,
        r.is_current,
        r.created_by_user_id,
-       u.name as created_by_user_name,
+       u.name       as created_by_user_name,
        r.created_at
 from recipes r
          join users u on u.id = r.created_by_user_id
+         join products p on r.product_id = p.id
 where r.recipe_group_id = $1
 order by r.revision desc
 `
@@ -249,6 +301,10 @@ type GetRecipesByGroupIDRow struct {
 	RecipeID          pgtype.UUID
 	RecipeGroupID     pgtype.UUID
 	Name              string
+	ProductID         pgtype.UUID
+	ProductName       string
+	ProductUnit       Unit
+	ProducedQuantity  int64
 	Status            Status
 	Revision          int32
 	IsCurrent         bool
@@ -270,6 +326,10 @@ func (q *Queries) GetRecipesByGroupID(ctx context.Context, db DBTX, recipeGroupI
 			&i.RecipeID,
 			&i.RecipeGroupID,
 			&i.Name,
+			&i.ProductID,
+			&i.ProductName,
+			&i.ProductUnit,
+			&i.ProducedQuantity,
 			&i.Status,
 			&i.Revision,
 			&i.IsCurrent,

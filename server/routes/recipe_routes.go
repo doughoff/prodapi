@@ -55,6 +55,10 @@ func (r *RouteManager) getAllRecipes(c *fiber.Ctx, tx *pgx.Tx) error {
 			RecipeGroupID:     recipes[i].RecipeGroupID,
 			Status:            recipes[i].Status,
 			Name:              recipes[i].Name,
+			ProductID:         recipes[i].ProductID,
+			ProductName:       recipes[i].ProductName,
+			ProductUnit:       recipes[i].ProductUnit,
+			ProducedQuantity:  float64(recipes[i].ProducedQuantity) / 1000,
 			Revision:          recipes[i].Revision,
 			IsCurrent:         recipes[i].IsCurrent,
 			CreatedByUserID:   recipes[i].CreatedByUserID,
@@ -130,6 +134,10 @@ func (r *RouteManager) getRecipeByGroupID(c *fiber.Ctx, tx *pgx.Tx) error {
 			RecipeGroupID:     recipes[i].RecipeGroupID,
 			Status:            recipes[i].Status,
 			Name:              recipes[i].Name,
+			ProductID:         recipes[i].ProductID,
+			ProductName:       recipes[i].ProductName,
+			ProductUnit:       recipes[i].ProductUnit,
+			ProducedQuantity:  float64(recipes[i].ProducedQuantity) / 1000,
 			Revision:          recipes[i].Revision,
 			IsCurrent:         recipes[i].IsCurrent,
 			CreatedByUserID:   recipes[i].CreatedByUserID,
@@ -159,10 +167,12 @@ func (r *RouteManager) getRecipeByGroupID(c *fiber.Ctx, tx *pgx.Tx) error {
 }
 
 type CreateRecipeBody struct {
-	Name        string `json:"name" validate:"required,gte=3,lte=255"`
-	Ingredients []struct {
+	Name             string      `json:"name" validate:"required,gte=3,lte=255"`
+	ProductID        pgtype.UUID `json:"productId" validate:"required"`
+	ProducedQuantity pgtype.UUID `json:"producedQuantity" validate:"required,gte=1"`
+	Ingredients      []struct {
 		ProductID *pgtype.UUID `json:"productId" validate:"required"`
-		Quantity  int32        `json:"quantity" validate:"required"`
+		Quantity  int64        `json:"quantity" validate:"required"`
 	} `json:"ingredients" validate:"required,dive,required"`
 }
 
@@ -193,7 +203,7 @@ func (r *RouteManager) createRecipe(c *fiber.Ctx, tx *pgx.Tx) error {
 		ingParams = append(ingParams, &postgres.CreateRecipeIngredientsParams{
 			RecipeID:  recipeID,
 			ProductID: *ing.ProductID,
-			Quantity:  ing.Quantity,
+			Quantity:  ing.Quantity * 1000,
 		})
 	}
 
@@ -213,7 +223,7 @@ type CreateRecipeRevisionBody struct {
 	Name        string `json:"name" validate:"required,gte=3,lte=255"`
 	Ingredients []struct {
 		ProductID *pgtype.UUID `json:"productId" validate:"required"`
-		Quantity  int32        `json:"quantity" validate:"required"`
+		Quantity  int64        `json:"quantity" validate:"required"`
 	} `json:"ingredients" validate:"required,dive,required"`
 }
 
@@ -329,6 +339,10 @@ func (r *RouteManager) getRecipeAndIngredientsByID(c *fiber.Ctx, tx *pgx.Tx, rec
 		RecipeGroupID:     recipe.RecipeGroupID,
 		Status:            recipe.Status,
 		Name:              recipe.Name,
+		ProductID:         recipe.ProductID,
+		ProductName:       recipe.ProductName,
+		ProductUnit:       recipe.ProductUnit,
+		ProducedQuantity:  float64(recipe.ProducedQuantity) / 1000,
 		Revision:          recipe.Revision,
 		IsCurrent:         recipe.IsCurrent,
 		CreatedByUserID:   recipe.CreatedByUserID,

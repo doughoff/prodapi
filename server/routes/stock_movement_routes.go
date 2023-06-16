@@ -107,15 +107,107 @@ func (r *RouteManager) getStockMovementByID(c *fiber.Ctx, tx *pgx.Tx) error {
 }
 
 type CreateMovementBody struct {
-	Name string `json:"name" validate:"required,min=1,max=255"`
+	Type     postgres.MovementType `json:"type" validate:"required"`
+	Date     time.Time             `json:"date" validate:"required"`
+	EntityID *pgtype.UUID          `json:"entityId" validate:"required"`
+	Items    []*struct {
+		ProductID *pgtype.UUID `json:"productId" validate:"required"`
+		Quantity  int64        `json:"quantity" validate:"required"`
+		Price     int64        `json:"price" validate:"required"`
+		Batch     string       `json:"batch"`
+	} `json:"items"`
 }
 
 func (r *RouteManager) createStockMovement(c *fiber.Ctx, tx *pgx.Tx) error {
-	return nil
+	userID := c.Locals("userId").(pgtype.UUID)
+	body := new(CreateMovementBody)
+	if err := c.BodyParser(body); err != nil {
+		return types.NewInvalidBodyError()
+	}
+	if err := r.validate.Struct(body); err != nil {
+		return err
+	}
+
+	if !body.Type.Valid() {
+		return types.NewInvalidParamsError("invalid value for movement type")
+	}
+
+	movementID, err := r.db.CreateStockMovement(c.Context(), *tx, &postgres.CreateStockMovementParams{
+		Type:            body.Type,
+		EntityID:        *body.EntityID,
+		Date:            pgtype.Date{Time: body.Date, Valid: true},
+		CreatedByUserID: userID,
+	})
+	if err != nil {
+		return err
+	}
+
+	movItemParams := make([]*postgres.CreateStockMovementItemsParams, 0)
+	for _, item := range body.Items {
+		batch := sql.NullString{Valid: false}
+		if item.Batch != "" {
+			batch = sql.NullString{String: item.Batch, Valid: true}
+		}
+
+		movItemParams = append(movItemParams, &postgres.CreateStockMovementItemsParams{
+			StockMovementID: movementID,
+			ProductID:       *item.ProductID,
+			Quantity:        item.Quantity,
+			Price:           item.Price,
+			Batch:           pgtype.Text(batch),
+		})
+	}
+
+	_, err = r.db.CreateStockMovementItems(c.Context(), *tx, movItemParams)
+	if err != nil {
+		return err
+	}
+
+	createdMovement, err := r.getMovementByID(c, tx, movementID)
+	if err != nil {
+		return err
+	}
+
+	return c.Status(fiber.StatusCreated).JSON(createdMovement)
+}
+
+type UpdateMovementBody struct {
+	Status   postgres.Status `json:"status" validate:"required"`
+	Date     time.Time       `json:"date" validate:"required"`
+	EntityID *pgtype.UUID    `json:"entityId" validate:"required"`
 }
 
 func (r *RouteManager) updateStockMovement(c *fiber.Ctx, tx *pgx.Tx) error {
-	return nil
+	body := new(UpdateMovementBody)
+	if err := c.BodyParser(body); err != nil {
+		return types.NewInvalidBodyError()
+	}
+	if err := r.validate.Struct(body); err != nil {
+		return err
+	}
+
+	idParam := c.Params("id")
+	movementID := pgtype.UUID{}
+	if err := movementID.Scan(idParam); err != nil {
+		return types.NewInvalidParamsError("invalid uuid on id url param")
+	}
+
+	err := r.db.UpdateStockMovement(c.Context(), *tx, &postgres.UpdateStockMovementParams{
+		ID:       movementID,
+		Status:   body.Status,
+		Date:     pgtype.Date{Time: body.Date, Valid: true},
+		EntityID: *body.EntityID,
+	})
+	if err != nil {
+		return err
+	}
+
+	updatedMovement, err := r.getMovementByID(c, tx, movementID)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(updatedMovement)
 }
 
 func (r *RouteManager) getMovementByID(c *fiber.Ctx, tx *pgx.Tx, uuid pgtype.UUID) (*dto.StockMovementDTO, error) {

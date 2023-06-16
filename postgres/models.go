@@ -197,14 +197,16 @@ type Product struct {
 }
 
 type Recipe struct {
-	RecipeID        pgtype.UUID
-	RecipeGroupID   pgtype.UUID
-	Name            string
-	Status          Status
-	Revision        int32
-	IsCurrent       bool
-	CreatedByUserID pgtype.UUID
-	CreatedAt       pgtype.Timestamp
+	RecipeID         pgtype.UUID
+	RecipeGroupID    pgtype.UUID
+	Name             string
+	ProductID        pgtype.UUID
+	ProducedQuantity int64
+	Status           Status
+	Revision         int32
+	IsCurrent        bool
+	CreatedByUserID  pgtype.UUID
+	CreatedAt        pgtype.Timestamp
 }
 
 type RecipeIngredient struct {

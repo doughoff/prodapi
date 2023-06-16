@@ -7,12 +7,16 @@ import (
 )
 
 type RecipeDTO struct {
-	RecipeID      pgtype.UUID     `json:"recipeId"`
-	RecipeGroupID pgtype.UUID     `json:"recipeGroupId"`
-	Status        postgres.Status `json:"status"`
-	Name          string          `json:"name"`
-	Revision      int32           `json:"revision"`
-	IsCurrent     bool            `json:"isCurrent"`
+	RecipeID         pgtype.UUID     `json:"recipeId"`
+	RecipeGroupID    pgtype.UUID     `json:"recipeGroupId"`
+	Status           postgres.Status `json:"status"`
+	Name             string          `json:"name"`
+	ProductID        pgtype.UUID     `json:"productId"`
+	ProductName      string          `json:"productName"`
+	ProductUnit      postgres.Unit   `json:"productUnit"`
+	ProducedQuantity float64         `json:"producedQuantity"`
+	Revision         int32           `json:"revision"`
+	IsCurrent        bool            `json:"isCurrent"`
 
 	CreatedByUserID   pgtype.UUID `json:"createdByUserId"`
 	CreatedByUserName string      `json:"createdByUserName"`
@@ -22,11 +26,12 @@ type RecipeDTO struct {
 }
 
 type RecipeIngredientDTO struct {
-	ID          pgtype.UUID `json:"id"`
-	ProductID   pgtype.UUID `json:"productId"`
-	ProductName string      `json:"productName"`
-	RecipeID    pgtype.UUID `json:"recipeId"`
-	Quantity    int32       `json:"quantity"`
+	ID          pgtype.UUID   `json:"id"`
+	ProductID   pgtype.UUID   `json:"productId"`
+	ProductName string        `json:"productName"`
+	ProductUnit postgres.Unit `json:"productUnit"`
+	RecipeID    pgtype.UUID   `json:"recipeId"`
+	Quantity    float64       `json:"quantity"`
 }
 
 func ToRecipeIngredientDTO(ingredient *postgres.GetRecipeIngredientsRow) *RecipeIngredientDTO {
@@ -34,7 +39,8 @@ func ToRecipeIngredientDTO(ingredient *postgres.GetRecipeIngredientsRow) *Recipe
 		ID:          ingredient.ID,
 		ProductID:   ingredient.ProductID,
 		ProductName: ingredient.ProductName,
+		ProductUnit: ingredient.ProductUnit,
 		RecipeID:    ingredient.RecipeID,
-		Quantity:    ingredient.Quantity,
+		Quantity:    float64(ingredient.Quantity) / 1000,
 	}
 }
