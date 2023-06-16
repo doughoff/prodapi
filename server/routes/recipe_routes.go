@@ -379,6 +379,6 @@ func (r *RouteManager) RegisterRecipeRoutes() {
 	r.app.Get("/recipes_group/:id", r.dbWrapper.WithTransaction(r.getRecipeByGroupID))
 	r.app.Post("/recipes", r.dbWrapper.WithTransaction(r.createRecipe))
 	r.app.Put("/recipes/:id", r.dbWrapper.WithTransaction(r.createRecipeRevision))
-	r.app.Patch("/recipes/:id/status", r.dbWrapper.WithTransaction(r.updateRecipeStatus))
+	r.app.Patch("/recipes_group/:id/status", r.dbWrapper.WithTransaction(r.updateRecipeStatus))
 
 }
