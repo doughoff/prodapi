@@ -47,6 +47,7 @@ func Serve() {
 	routeManager.RegisterUserRoutes()
 	routeManager.RegisterProductRoutes()
 	routeManager.RegisterRecipeRoutes()
+	routeManager.RegisterStockMovementRoutes()
 
 	err = app.Listen(":3088")
 	if err != nil {

@@ -3,6 +3,7 @@ package routes
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"github.com/gofiber/fiber/v2"
 	"github.com/hoffax/prodapi/postgres"
 	"github.com/hoffax/prodapi/server/dto"
@@ -46,6 +47,7 @@ func (r *RouteManager) getAllStockMovements(c *fiber.Ctx, tx *pgx.Tx) error {
 	}
 
 	var totalCount int64
+
 	if len(stockMovements) > 0 {
 		totalCount = stockMovements[0].FullCount
 	}
@@ -65,6 +67,7 @@ func (r *RouteManager) getAllStockMovements(c *fiber.Ctx, tx *pgx.Tx) error {
 			CreateByUserName:    stockMovements[i].CreateByUserName.String,
 			CancelledByUserID:   stockMovements[i].CancelledByUserID,
 			CancelledByUserName: stockMovements[i].CancelledByUserName.String,
+			Items:               make([]*dto.StockMovementItemDTO, 0),
 		}
 		resultRows[i] = resultRow
 		stockMovementIDS = append(stockMovementIDS, resultRow.ID)
@@ -79,6 +82,7 @@ func (r *RouteManager) getAllStockMovements(c *fiber.Ctx, tx *pgx.Tx) error {
 	for _, item := range items {
 		if sm, ok := resultMap[item.StockMovementID]; ok {
 			sm.Total += item.Price * item.Quantity
+			//sm.Items = append(sm.Items, dto.ToStockMovementItemDTO(item))
 		}
 	}
 
@@ -112,7 +116,7 @@ type CreateMovementBody struct {
 	EntityID *pgtype.UUID          `json:"entityId" validate:"required"`
 	Items    []*struct {
 		ProductID *pgtype.UUID `json:"productId" validate:"required"`
-		Quantity  int64        `json:"quantity" validate:"required"`
+		Quantity  float64      `json:"quantity" validate:"required"`
 		Price     int64        `json:"price" validate:"required"`
 		Batch     string       `json:"batch"`
 	} `json:"items"`
@@ -122,6 +126,7 @@ func (r *RouteManager) createStockMovement(c *fiber.Ctx, tx *pgx.Tx) error {
 	userID := c.Locals("userId").(pgtype.UUID)
 	body := new(CreateMovementBody)
 	if err := c.BodyParser(body); err != nil {
+		fmt.Printf("err: %+v\n", err)
 		return types.NewInvalidBodyError()
 	}
 	if err := r.validate.Struct(body); err != nil {
@@ -152,7 +157,7 @@ func (r *RouteManager) createStockMovement(c *fiber.Ctx, tx *pgx.Tx) error {
 		movItemParams = append(movItemParams, &postgres.CreateStockMovementItemsParams{
 			StockMovementID: movementID,
 			ProductID:       *item.ProductID,
-			Quantity:        item.Quantity,
+			Quantity:        int64(item.Quantity * 1000),
 			Price:           item.Price,
 			Batch:           pgtype.Text(batch),
 		})
@@ -236,8 +241,8 @@ func (r *RouteManager) getMovementByID(c *fiber.Ctx, tx *pgx.Tx, uuid pgtype.UUI
 }
 
 func (r *RouteManager) RegisterStockMovementRoutes() {
-	r.app.Get("/stock_movement/", r.dbWrapper.WithTransaction(r.getAllStockMovements))
-	r.app.Get("/stock_movement/:id", r.dbWrapper.WithTransaction(r.getStockMovementByID))
-	r.app.Post("/stock_movement/", r.dbWrapper.WithTransaction(r.createStockMovement))
-	r.app.Put("/stock_movement/", r.dbWrapper.WithTransaction(r.updateStockMovement))
+	r.app.Get("/stock_movements/", r.dbWrapper.WithTransaction(r.getAllStockMovements))
+	r.app.Get("/stock_movements/:id", r.dbWrapper.WithTransaction(r.getStockMovementByID))
+	r.app.Post("/stock_movements/", r.dbWrapper.WithTransaction(r.createStockMovement))
+	r.app.Put("/stock_movements/", r.dbWrapper.WithTransaction(r.updateStockMovement))
 }
