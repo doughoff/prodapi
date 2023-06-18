@@ -173,7 +173,7 @@ from stock_movements si
 where si.status = any ($1::status[])
   and e.name ilike '%' || $2 || '%'
   and si.date >= $3
-order by si.date
+order by si.date desc
 limit $5 offset $4
 `
 

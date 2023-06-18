@@ -31,5 +31,7 @@ func ToProductDTO(product *postgres.Product) *ProductDTO {
 		ConversionFactor: product.ConversionFactor,
 		CreatedAt:        product.CreatedAt.Time,
 		UpdatedAt:        product.UpdatedAt.Time,
+		Stock:            1,
+		AverageCost:      1500,
 	}
 }

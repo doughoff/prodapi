@@ -17,7 +17,7 @@ from stock_movements si
 where si.status = any (@status_options::status[])
   and e.name ilike '%' || @search || '%'
   and si.date >= @start_date
-order by si.date
+order by si.date desc
 limit @page_limit offset @page_offset;
 
 -- name: GetStockMovementByID :one

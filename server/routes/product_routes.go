@@ -58,6 +58,8 @@ func (r *RouteManager) getAllProducts(c *fiber.Ctx, tx *pgx.Tx) error {
 			BatchControl:     products[i].BatchControl,
 			CreatedAt:        products[i].CreatedAt.Time,
 			UpdatedAt:        products[i].UpdatedAt.Time,
+			Stock:            1,
+			AverageCost:      1500,
 		}
 	}
 

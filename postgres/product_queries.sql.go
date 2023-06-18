@@ -105,7 +105,7 @@ where p.status = ANY ($1::status[])
             p.name ilike '%' || $2 || '%'
         or p.barcode ilike '%' || $2 || '%'
     )
-order by created_at
+order by created_at desc
 limit $4 offset $3
 `
 

@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type DBWrapper struct {
-	DB *pgx.Conn
+	DB *pgxpool.Pool
 }
 
 func (w *DBWrapper) WithTransaction(handler func(c *fiber.Ctx, tx *pgx.Tx) error) fiber.Handler {
@@ -25,12 +26,16 @@ func (w *DBWrapper) WithTransaction(handler func(c *fiber.Ctx, tx *pgx.Tx) error
 
 		defer func() {
 			if p := recover(); p != nil {
-				tx.Rollback(ctx)
+				rbErr := tx.Rollback(ctx) // err is non-nil; don't change it
+				fmt.Printf("err: %+v\n", rbErr)
+				fmt.Printf("err: %+v\n", err)
 				panic(p) // re-throw panic after Rollback
 			} else if err != nil {
-				tx.Rollback(ctx) // err is non-nil; don't change it
+				rbErr := tx.Rollback(ctx) // err is non-nil; don't change it
+				fmt.Printf("err: %+v\n", rbErr)
 			} else {
 				err = tx.Commit(ctx) // err is nil; if Commit returns error update err
+				fmt.Printf("err: %+v\n", err)
 			}
 		}()
 

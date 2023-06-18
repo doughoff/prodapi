@@ -7,7 +7,7 @@ where p.status = ANY (@status_options::status[])
             p.name ilike '%' || @search || '%'
         or p.barcode ilike '%' || @search || '%'
     )
-order by created_at
+order by created_at desc
 limit @page_limit offset @page_offset;
 
 -- name: GetProductByID :one
