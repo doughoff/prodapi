@@ -32,12 +32,16 @@ func Serve() {
 	})
 
 	store := session.New(session.Config{
-		Expiration: 24 * time.Hour,
+		Expiration: 72 * time.Hour,
 	})
 	app.Use(logger.New())
 	//app.Get("/metrics", monitor.New())
 
-	app.Use(cors.New())
+	app.Use(cors.New(cors.Config{
+		AllowCredentials: true,
+		AllowOrigins:     "http://127.0.0.1:5173",
+		AllowHeaders:     "Origin, Content-Type, Accept",
+	}))
 
 	//memoryStore := memory.New(memory.Config{
 	//	GCInterval: 5 * time.Hour,
