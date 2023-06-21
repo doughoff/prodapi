@@ -32,7 +32,8 @@ func Serve() {
 	})
 
 	store := session.New(session.Config{
-		Expiration: 72 * time.Hour,
+		Expiration:     72 * time.Hour,
+		CookieHTTPOnly: true,
 	})
 	app.Use(logger.New())
 	//app.Get("/metrics", monitor.New())
