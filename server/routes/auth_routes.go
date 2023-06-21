@@ -1,13 +1,10 @@
 package routes
 
 import (
-	"encoding/json"
 	"errors"
 	"github.com/gofiber/fiber/v2"
-	"github.com/google/uuid"
 	"github.com/hoffax/prodapi/server/types"
 	"github.com/jackc/pgx/v5"
-	"time"
 )
 
 type LoginPayload struct {
@@ -37,39 +34,34 @@ func (r *RouteManager) login(c *fiber.Ctx, tx *pgx.Tx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(map[string]string{"message": "invalid email or password"})
 	}
 
-	// generate new uuid for session key
-	sessionId, err := uuid.NewUUID()
+	sess, err := r.sessionStore.Get(c)
 	if err != nil {
-		return err
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
-	sessionData := &types.SessionData{
-		UserId: user.ID,
-		Roles:  user.Roles,
-	}
-
-	sessionDataBytes, err := json.Marshal(sessionData)
+	userIDStr, err := user.ID.MarshalJSON()
 	if err != nil {
-		return err
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+	}
+	sess.Set("userID", userIDStr)
+
+	if err := sess.Save(); err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
-	err = r.sessionStore.Set(sessionId.String(), sessionDataBytes, 72*time.Hour)
-	if err != nil {
-		return err
-	}
-
-	return c.Status(fiber.StatusOK).JSON(map[string]string{"session_id": sessionId.String()})
+	return c.Status(fiber.StatusOK).Send([]byte("ok"))
 }
 
-func (r *RouteManager) logout(c *fiber.Ctx, tx *pgx.Tx) error {
-	headers := c.GetReqHeaders()
-	sessionID := headers["X-Session"]
-
-	err := r.sessionStore.Delete(sessionID)
+func (r *RouteManager) logout(c *fiber.Ctx, _ *pgx.Tx) error {
+	sess, err := r.sessionStore.Get(c)
 	if err != nil {
-		return err
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
+	// Destroy session
+	if err := sess.Destroy(); err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+	}
 	return c.Status(fiber.StatusOK).JSON(map[string]string{"message": "logged out"})
 }
 

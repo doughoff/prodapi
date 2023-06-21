@@ -7,7 +7,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
-	"github.com/gofiber/storage/memory"
+	"github.com/gofiber/fiber/v2/middleware/session"
 	"github.com/hoffax/prodapi/postgres"
 	"github.com/hoffax/prodapi/server/config"
 	"github.com/hoffax/prodapi/server/middleware"
@@ -31,17 +31,20 @@ func Serve() {
 		ErrorHandler: middleware.FiberCustomErrorHandler,
 	})
 
+	store := session.New(session.Config{
+		Expiration: 24 * time.Hour,
+	})
 	app.Use(logger.New())
 	//app.Get("/metrics", monitor.New())
 
 	app.Use(cors.New())
 
-	memoryStore := memory.New(memory.Config{
-		GCInterval: 5 * time.Hour,
-	})
-	app.Use(middleware.AuthMiddleware(memoryStore))
+	//memoryStore := memory.New(memory.Config{
+	//	GCInterval: 5 * time.Hour,
+	//})
+	app.Use(middleware.AuthMiddleware(store))
 
-	routeManager := routes.NewRouteManager(app, db, dbWrapper, validate, memoryStore)
+	routeManager := routes.NewRouteManager(app, db, dbWrapper, validate, store)
 	routeManager.RegisterAuthRoutes()
 	routeManager.RegisterEntityRoutes()
 	routeManager.RegisterUserRoutes()

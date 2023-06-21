@@ -123,7 +123,10 @@ type CreateMovementBody struct {
 }
 
 func (r *RouteManager) createStockMovement(c *fiber.Ctx, tx *pgx.Tx) error {
-	userID := c.Locals("userId").(pgtype.UUID)
+	userID, err := r.getCurrentUserId(c)
+	if err != nil {
+		return types.NewInvalidParamsError("invalid userId")
+	}
 	body := new(CreateMovementBody)
 	if err := c.BodyParser(body); err != nil {
 		fmt.Printf("err: %+v\n", err)
@@ -141,7 +144,7 @@ func (r *RouteManager) createStockMovement(c *fiber.Ctx, tx *pgx.Tx) error {
 		Type:            body.Type,
 		EntityID:        *body.EntityID,
 		Date:            pgtype.Date{Time: body.Date, Valid: true},
-		CreatedByUserID: userID,
+		CreatedByUserID: *userID,
 	})
 	if err != nil {
 		return err

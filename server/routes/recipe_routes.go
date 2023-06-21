@@ -177,7 +177,10 @@ type CreateRecipeBody struct {
 }
 
 func (r *RouteManager) createRecipe(c *fiber.Ctx, tx *pgx.Tx) error {
-	userID := c.Locals("userId").(pgtype.UUID)
+	userID, err := r.getCurrentUserId(c)
+	if err != nil {
+		return types.NewInvalidParamsError("invalid userId")
+	}
 	body := &CreateRecipeBody{}
 	if err := c.BodyParser(body); err != nil {
 		return types.NewInvalidParamsError("invalid body")
@@ -195,7 +198,7 @@ func (r *RouteManager) createRecipe(c *fiber.Ctx, tx *pgx.Tx) error {
 		Name:             body.Name,
 		ProductID:        body.ProductID,
 		ProducedQuantity: int64(body.ProducedQuantity * 1000),
-		CreatedByUserID:  userID,
+		CreatedByUserID:  *userID,
 	})
 	if err != nil {
 		return err
@@ -236,7 +239,10 @@ type CreateRecipeRevisionBody struct {
 }
 
 func (r *RouteManager) createRecipeRevision(c *fiber.Ctx, tx *pgx.Tx) error {
-	userID := c.Locals("userId").(pgtype.UUID)
+	userID, err := r.getCurrentUserId(c)
+	if err != nil {
+		return types.NewInvalidParamsError("invalid userId")
+	}
 	body := &CreateRecipeRevisionBody{}
 	if err := c.BodyParser(body); err != nil {
 		return types.NewInvalidParamsError("invalid body")
@@ -271,7 +277,7 @@ func (r *RouteManager) createRecipeRevision(c *fiber.Ctx, tx *pgx.Tx) error {
 		ProductID:        body.ProductID,
 		ProducedQuantity: int64(body.ProducedQuantity * 1000),
 		RecipeGroupID:    prevRecipe.RecipeGroupID,
-		CreatedByUserID:  userID,
+		CreatedByUserID:  *userID,
 	})
 	if err != nil {
 		return err
