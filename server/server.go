@@ -39,7 +39,7 @@ func Serve() {
 
 	app.Use(cors.New(cors.Config{
 		AllowCredentials: true,
-		AllowOrigins:     "http://127.0.0.1:5173",
+		AllowOriginsFunc: func(origin string) bool { return true },
 		AllowHeaders:     "Origin, Content-Type, Accept",
 	}))
 
