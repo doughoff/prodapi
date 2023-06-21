@@ -68,6 +68,59 @@ func (e MovementType) Valid() bool {
 	return false
 }
 
+type ProductionStep string
+
+const (
+	ProductionStepPENDING    ProductionStep = "PENDING"
+	ProductionStepINPROGRESS ProductionStep = "IN_PROGRESS"
+	ProductionStepCOMPLETED  ProductionStep = "COMPLETED"
+)
+
+func (e *ProductionStep) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ProductionStep(s)
+	case string:
+		*e = ProductionStep(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ProductionStep: %T", src)
+	}
+	return nil
+}
+
+type NullProductionStep struct {
+	ProductionStep ProductionStep
+	Valid          bool // Valid is true if ProductionStep is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullProductionStep) Scan(value interface{}) error {
+	if value == nil {
+		ns.ProductionStep, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ProductionStep.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullProductionStep) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ProductionStep), nil
+}
+
+func (e ProductionStep) Valid() bool {
+	switch e {
+	case ProductionStepPENDING,
+		ProductionStepINPROGRESS,
+		ProductionStepCOMPLETED:
+		return true
+	}
+	return false
+}
+
 type Status string
 
 const (
@@ -184,6 +237,12 @@ type Entity struct {
 	UpdatedAt pgtype.Timestamp
 }
 
+type OrderCyclesMovement struct {
+	ID         pgtype.UUID
+	CycleID    pgtype.UUID
+	MovementID pgtype.UUID
+}
+
 type Product struct {
 	ID               pgtype.UUID
 	Status           Status
@@ -194,6 +253,27 @@ type Product struct {
 	ConversionFactor int64
 	CreatedAt        pgtype.Timestamp
 	UpdatedAt        pgtype.Timestamp
+}
+
+type ProductionOrder struct {
+	ID                pgtype.UUID
+	Status            Status
+	Step              ProductionStep
+	Code              string
+	Cycles            int64
+	RecipeID          pgtype.UUID
+	CreatedByUserID   pgtype.UUID
+	CancelledByUserID pgtype.UUID
+	CreatedAt         pgtype.Timestamp
+	UpdatedAt         pgtype.Timestamp
+}
+
+type ProductionOrderCycle struct {
+	ID                pgtype.UUID
+	Factor            int64
+	ProductionOrderID pgtype.UUID
+	ProductionStep    ProductionStep
+	CompletedAt       pgtype.Timestamp
 }
 
 type Recipe struct {

@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/storage/memory"
 	"github.com/hoffax/prodapi/server/types"
@@ -25,6 +26,7 @@ func AuthMiddleware(store *memory.Storage) func(*fiber.Ctx) error {
 			return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 		}
 		if sessionDataBytes == nil {
+			fmt.Printf("its getting here...\n")
 			return fiber.NewError(fiber.StatusUnauthorized, "unauthenticated")
 		}
 
