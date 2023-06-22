@@ -183,9 +183,10 @@ func (r *RouteManager) createStockMovement(c *fiber.Ctx, tx *pgx.Tx) error {
 }
 
 type UpdateMovementBody struct {
-	Status   postgres.Status `json:"status" validate:"required"`
-	Date     time.Time       `json:"date" validate:"required"`
-	EntityID *pgtype.UUID    `json:"entityId" validate:"required"`
+	Status         postgres.Status `json:"status" validate:"required"`
+	Date           time.Time       `json:"date" validate:"required"`
+	EntityID       pgtype.UUID     `json:"entityId" validate:"required"`
+	DocumentNumber string          `json:"documentNumber"`
 }
 
 func (r *RouteManager) updateStockMovement(c *fiber.Ctx, tx *pgx.Tx) error {
@@ -204,10 +205,11 @@ func (r *RouteManager) updateStockMovement(c *fiber.Ctx, tx *pgx.Tx) error {
 	}
 
 	err := r.db.UpdateStockMovement(c.Context(), *tx, &postgres.UpdateStockMovementParams{
-		ID:       movementID,
-		Status:   body.Status,
-		Date:     pgtype.Date{Time: body.Date, Valid: true},
-		EntityID: *body.EntityID,
+		ID:             movementID,
+		Status:         body.Status,
+		Date:           pgtype.Date{Time: body.Date, Valid: true},
+		EntityID:       body.EntityID,
+		DocumentNumber: pgtype.Text(sql.NullString{String: body.DocumentNumber, Valid: len(body.DocumentNumber) > 0}),
 	})
 	if err != nil {
 		return err
