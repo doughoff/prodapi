@@ -250,6 +250,71 @@ func (q *Queries) GetStockMovements(ctx context.Context, db DBTX, arg *GetStockM
 	return items, nil
 }
 
+const getStockMovementsByIDS = `-- name: GetStockMovementsByIDS :many
+SELECT si.id,
+       si.status,
+       si.type,
+       si.date,
+       si.entity_id,
+       si.document_number,
+       e.name  as entity_name,
+       si.created_by_user_id,
+       u.name  as create_by_user_name,
+       si.cancelled_by_user_id,
+       uc.name as cancelled_by_user_name
+from stock_movements si
+         left join entities e on si.entity_id = e.id
+         left join users uc on si.cancelled_by_user_id = uc.id
+         left join users u on si.created_by_user_id = u.id
+where si.id = any($1::uuid[])
+`
+
+type GetStockMovementsByIDSRow struct {
+	ID                  pgtype.UUID
+	Status              Status
+	Type                MovementType
+	Date                pgtype.Date
+	EntityID            pgtype.UUID
+	DocumentNumber      pgtype.Text
+	EntityName          pgtype.Text
+	CreatedByUserID     pgtype.UUID
+	CreateByUserName    pgtype.Text
+	CancelledByUserID   pgtype.UUID
+	CancelledByUserName pgtype.Text
+}
+
+func (q *Queries) GetStockMovementsByIDS(ctx context.Context, db DBTX, stockMovementID []pgtype.UUID) ([]*GetStockMovementsByIDSRow, error) {
+	rows, err := db.Query(ctx, getStockMovementsByIDS, stockMovementID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []*GetStockMovementsByIDSRow{}
+	for rows.Next() {
+		var i GetStockMovementsByIDSRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Status,
+			&i.Type,
+			&i.Date,
+			&i.EntityID,
+			&i.DocumentNumber,
+			&i.EntityName,
+			&i.CreatedByUserID,
+			&i.CreateByUserName,
+			&i.CancelledByUserID,
+			&i.CancelledByUserName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateStockMovement = `-- name: UpdateStockMovement :exec
 update stock_movements
  set status = $1,

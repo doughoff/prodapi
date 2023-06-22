@@ -24,6 +24,24 @@ where si.status = any (@status_options::status[])
 order by si.date desc
 limit @page_limit offset @page_offset;
 
+-- name: GetStockMovementsByIDS :many
+SELECT si.id,
+       si.status,
+       si.type,
+       si.date,
+       si.entity_id,
+       si.document_number,
+       e.name  as entity_name,
+       si.created_by_user_id,
+       u.name  as create_by_user_name,
+       si.cancelled_by_user_id,
+       uc.name as cancelled_by_user_name
+from stock_movements si
+         left join entities e on si.entity_id = e.id
+         left join users uc on si.cancelled_by_user_id = uc.id
+         left join users u on si.created_by_user_id = u.id
+where si.id = any(@stock_movement_id::uuid[]);
+
 -- name: GetStockMovementByID :one
 SELECT si.id,
        si.status,

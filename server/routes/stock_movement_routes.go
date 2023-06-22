@@ -83,7 +83,6 @@ func (r *RouteManager) getAllStockMovements(c *fiber.Ctx, tx *pgx.Tx) error {
 	for _, item := range items {
 		if sm, ok := resultMap[item.StockMovementID]; ok {
 			sm.Total += item.Price * item.Quantity
-			//sm.Items = append(sm.Items, dto.ToStockMovementItemDTO(item))
 		}
 	}
 

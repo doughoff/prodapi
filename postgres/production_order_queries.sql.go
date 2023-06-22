@@ -11,55 +11,52 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const getOrderCyclesMovements = `-- name: GetOrderCyclesMovements :many
-select ocm.id,
-       ocm.cycle_id,
-       ocm.movement_id,
-       coalesce(ri.recipe_id, smi.product_id) as product_id,
-       coalesce(smi.quantity, 0) as cantidad,
-       coalesce(smi.price, 0) as price
-from order_cycles_movements ocm
-         join production_order_cycles poc on ocm.cycle_id = poc.id
-         left join production_orders po on poc.production_order_id = po.id
-         left join recipe_ingredients ri on po.recipe_id = ri.recipe_id
-         left join stock_movement_items smi on ocm.movement_id = smi.stock_movement_id
-where ocm.cycle_id = any ($1::uuid[])
+const createOrderCycleMovement = `-- name: CreateOrderCycleMovement :one
+insert into order_cycles_movements(cycle_id, movement_id)
+VALUES ($1, $2) returning id
 `
 
-type GetOrderCyclesMovementsRow struct {
-	ID         pgtype.UUID
+type CreateOrderCycleMovementParams struct {
 	CycleID    pgtype.UUID
 	MovementID pgtype.UUID
-	ProductID  pgtype.UUID
-	Cantidad   int64
-	Price      int64
 }
 
-func (q *Queries) GetOrderCyclesMovements(ctx context.Context, db DBTX, cycleIds []pgtype.UUID) ([]*GetOrderCyclesMovementsRow, error) {
-	rows, err := db.Query(ctx, getOrderCyclesMovements, cycleIds)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []*GetOrderCyclesMovementsRow{}
-	for rows.Next() {
-		var i GetOrderCyclesMovementsRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.CycleID,
-			&i.MovementID,
-			&i.ProductID,
-			&i.Cantidad,
-			&i.Price,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, &i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+func (q *Queries) CreateOrderCycleMovement(ctx context.Context, db DBTX, arg *CreateOrderCycleMovementParams) (pgtype.UUID, error) {
+	row := db.QueryRow(ctx, createOrderCycleMovement, arg.CycleID, arg.MovementID)
+	var id pgtype.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
+const createProductionOrder = `-- name: CreateProductionOrder :one
+insert into production_orders(code, cycles, recipe_id, created_by_user_id)
+values ($1, $2, $3, $4)
+returning id
+`
+
+type CreateProductionOrderParams struct {
+	Code            string
+	Cycles          int64
+	RecipeID        pgtype.UUID
+	CreatedByUserID pgtype.UUID
+}
+
+func (q *Queries) CreateProductionOrder(ctx context.Context, db DBTX, arg *CreateProductionOrderParams) (pgtype.UUID, error) {
+	row := db.QueryRow(ctx, createProductionOrder,
+		arg.Code,
+		arg.Cycles,
+		arg.RecipeID,
+		arg.CreatedByUserID,
+	)
+	var id pgtype.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
+type CreateProductionOrderCyclesParams struct {
+	Factor            int64
+	ProductionOrderID pgtype.UUID
+	CycleOrder        int64
 }
 
 const getProductionOrderByID = `-- name: GetProductionOrderByID :one
@@ -166,33 +163,16 @@ func (q *Queries) GetProductionOrderCycles(ctx context.Context, db DBTX, product
 }
 
 const getProductionOrderMovements = `-- name: GetProductionOrderMovements :many
-select poc.id, factor, production_order_id, production_step, cycle_order, completed_at, ocm.id, cycle_id, movement_id, sm.id, status, type, date, entity_id, created_by_user_id, cancelled_by_user_id, created_at, updated_at, document_number
+select ocm.cycle_id    as production_order_cycle_id,
+       ocm.movement_id as stock_movement_id
 from production_order_cycles poc
-    join order_cycles_movements ocm on poc.id = ocm.cycle_id
-    join stock_movements sm on ocm.movement_id = sm.id
+         join order_cycles_movements ocm on poc.id = ocm.cycle_id
 where poc.production_order_id = $1
 `
 
 type GetProductionOrderMovementsRow struct {
-	ID                pgtype.UUID
-	Factor            int64
-	ProductionOrderID pgtype.UUID
-	ProductionStep    ProductionStep
-	CycleOrder        int64
-	CompletedAt       pgtype.Timestamp
-	ID_2              pgtype.UUID
-	CycleID           pgtype.UUID
-	MovementID        pgtype.UUID
-	ID_3              pgtype.UUID
-	Status            Status
-	Type              MovementType
-	Date              pgtype.Date
-	EntityID          pgtype.UUID
-	CreatedByUserID   pgtype.UUID
-	CancelledByUserID pgtype.UUID
-	CreatedAt         pgtype.Timestamp
-	UpdatedAt         pgtype.Timestamp
-	DocumentNumber    pgtype.Text
+	ProductionOrderCycleID pgtype.UUID
+	StockMovementID        pgtype.UUID
 }
 
 func (q *Queries) GetProductionOrderMovements(ctx context.Context, db DBTX, productionOrderID pgtype.UUID) ([]*GetProductionOrderMovementsRow, error) {
@@ -204,27 +184,7 @@ func (q *Queries) GetProductionOrderMovements(ctx context.Context, db DBTX, prod
 	items := []*GetProductionOrderMovementsRow{}
 	for rows.Next() {
 		var i GetProductionOrderMovementsRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Factor,
-			&i.ProductionOrderID,
-			&i.ProductionStep,
-			&i.CycleOrder,
-			&i.CompletedAt,
-			&i.ID_2,
-			&i.CycleID,
-			&i.MovementID,
-			&i.ID_3,
-			&i.Status,
-			&i.Type,
-			&i.Date,
-			&i.EntityID,
-			&i.CreatedByUserID,
-			&i.CancelledByUserID,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.DocumentNumber,
-		); err != nil {
+		if err := rows.Scan(&i.ProductionOrderCycleID, &i.StockMovementID); err != nil {
 			return nil, err
 		}
 		items = append(items, &i)
@@ -335,4 +295,22 @@ func (q *Queries) GetProductionOrders(ctx context.Context, db DBTX, arg *GetProd
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateProductionOrder = `-- name: UpdateProductionOrder :exec
+update production_orders
+    set status = $1,
+        production_step = $2
+where id = $3
+`
+
+type UpdateProductionOrderParams struct {
+	Status         Status
+	ProductionStep ProductionStep
+	ID             pgtype.UUID
+}
+
+func (q *Queries) UpdateProductionOrder(ctx context.Context, db DBTX, arg *UpdateProductionOrderParams) error {
+	_, err := db.Exec(ctx, updateProductionOrder, arg.Status, arg.ProductionStep, arg.ID)
+	return err
 }

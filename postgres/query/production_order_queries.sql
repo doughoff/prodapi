@@ -62,23 +62,28 @@ select poc.id,
 from production_order_cycles poc
 where poc.production_order_id = any (@production_order_ids::uuid[]);
 
--- name: GetOrderCyclesMovements :many
-select ocm.id,
-       ocm.cycle_id,
-       ocm.movement_id,
-       coalesce(ri.recipe_id, smi.product_id) as product_id,
-       coalesce(smi.quantity, 0) as cantidad,
-       coalesce(smi.price, 0) as price
-from order_cycles_movements ocm
-         join production_order_cycles poc on ocm.cycle_id = poc.id
-         left join production_orders po on poc.production_order_id = po.id
-         left join recipe_ingredients ri on po.recipe_id = ri.recipe_id
-         left join stock_movement_items smi on ocm.movement_id = smi.stock_movement_id
-where ocm.cycle_id = any (@cycle_ids::uuid[]);
-
 -- name: GetProductionOrderMovements :many
-select *
+select ocm.cycle_id    as production_order_cycle_id,
+       ocm.movement_id as stock_movement_id
 from production_order_cycles poc
-    join order_cycles_movements ocm on poc.id = ocm.cycle_id
-    join stock_movements sm on ocm.movement_id = sm.id
+         join order_cycles_movements ocm on poc.id = ocm.cycle_id
 where poc.production_order_id = @production_order_id;
+
+-- name: CreateProductionOrder :one
+insert into production_orders(code, cycles, recipe_id, created_by_user_id)
+values (@code, @cycles, @recipe_id, @created_by_user_id)
+returning id;
+
+-- name: UpdateProductionOrder :exec
+update production_orders
+    set status = @status,
+        production_step = @production_step
+where id = @id;
+
+-- name: CreateProductionOrderCycles :copyfrom
+insert into production_order_cycles(factor, production_order_id, cycle_order)
+values ($1, $2, $3);
+
+-- name: CreateOrderCycleMovement :one
+insert into order_cycles_movements(cycle_id, movement_id)
+VALUES (@cycle_id, @movement_id) returning id;

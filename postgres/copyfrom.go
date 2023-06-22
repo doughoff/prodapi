@@ -9,6 +9,40 @@ import (
 	"context"
 )
 
+// iteratorForCreateProductionOrderCycles implements pgx.CopyFromSource.
+type iteratorForCreateProductionOrderCycles struct {
+	rows                 []*CreateProductionOrderCyclesParams
+	skippedFirstNextCall bool
+}
+
+func (r *iteratorForCreateProductionOrderCycles) Next() bool {
+	if len(r.rows) == 0 {
+		return false
+	}
+	if !r.skippedFirstNextCall {
+		r.skippedFirstNextCall = true
+		return true
+	}
+	r.rows = r.rows[1:]
+	return len(r.rows) > 0
+}
+
+func (r iteratorForCreateProductionOrderCycles) Values() ([]interface{}, error) {
+	return []interface{}{
+		r.rows[0].Factor,
+		r.rows[0].ProductionOrderID,
+		r.rows[0].CycleOrder,
+	}, nil
+}
+
+func (r iteratorForCreateProductionOrderCycles) Err() error {
+	return nil
+}
+
+func (q *Queries) CreateProductionOrderCycles(ctx context.Context, db DBTX, arg []*CreateProductionOrderCyclesParams) (int64, error) {
+	return db.CopyFrom(ctx, []string{"production_order_cycles"}, []string{"factor", "production_order_id", "cycle_order"}, &iteratorForCreateProductionOrderCycles{rows: arg})
+}
+
 // iteratorForCreateRecipeIngredients implements pgx.CopyFromSource.
 type iteratorForCreateRecipeIngredients struct {
 	rows                 []*CreateRecipeIngredientsParams
