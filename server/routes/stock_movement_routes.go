@@ -112,10 +112,11 @@ func (r *RouteManager) getStockMovementByID(c *fiber.Ctx, tx *pgx.Tx) error {
 }
 
 type CreateMovementBody struct {
-	Type     postgres.MovementType `json:"type" validate:"required"`
-	Date     time.Time             `json:"date" validate:"required"`
-	EntityID pgtype.UUID           `json:"entityId"`
-	Items    []*struct {
+	Type           postgres.MovementType `json:"type" validate:"required"`
+	Date           time.Time             `json:"date" validate:"required"`
+	EntityID       pgtype.UUID           `json:"entityId"`
+	DocumentNumber string                `json:"documentNumber"`
+	Items          []*struct {
 		ProductID *pgtype.UUID `json:"productId" validate:"required"`
 		Quantity  float64      `json:"quantity" validate:"required"`
 		Price     int64        `json:"price" validate:"required"`
@@ -145,6 +146,7 @@ func (r *RouteManager) createStockMovement(c *fiber.Ctx, tx *pgx.Tx) error {
 		Type:            body.Type,
 		EntityID:        body.EntityID,
 		Date:            pgtype.Date{Time: body.Date, Valid: true},
+		DocumentNumber:  pgtype.Text(sql.NullString{String: body.DocumentNumber, Valid: len(body.DocumentNumber) > 0}),
 		CreatedByUserID: *userID,
 	})
 	if err != nil {
