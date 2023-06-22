@@ -258,7 +258,7 @@ type Product struct {
 type ProductionOrder struct {
 	ID                pgtype.UUID
 	Status            Status
-	Step              ProductionStep
+	ProductionStep    ProductionStep
 	Code              string
 	Cycles            int64
 	RecipeID          pgtype.UUID
@@ -273,6 +273,7 @@ type ProductionOrderCycle struct {
 	Factor            int64
 	ProductionOrderID pgtype.UUID
 	ProductionStep    ProductionStep
+	CycleOrder        int64
 	CompletedAt       pgtype.Timestamp
 }
 
@@ -306,6 +307,7 @@ type StockMovement struct {
 	CancelledByUserID pgtype.UUID
 	CreatedAt         pgtype.Timestamp
 	UpdatedAt         pgtype.Timestamp
+	DocumentNumber    pgtype.Text
 }
 
 type StockMovementItem struct {

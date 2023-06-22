@@ -16,8 +16,10 @@ insert into stock_movements(
                             type,
                             date,
                             entity_id,
-                            created_by_user_id)
-values ($1, $2, $3, $4)
+                            created_by_user_id,
+                            document_number
+                            )
+values ($1, $2, $3, $4, $5)
 returning id
 `
 
@@ -26,6 +28,7 @@ type CreateStockMovementParams struct {
 	Date            pgtype.Date
 	EntityID        pgtype.UUID
 	CreatedByUserID pgtype.UUID
+	DocumentNumber  pgtype.Text
 }
 
 func (q *Queries) CreateStockMovement(ctx context.Context, db DBTX, arg *CreateStockMovementParams) (pgtype.UUID, error) {
@@ -34,6 +37,7 @@ func (q *Queries) CreateStockMovement(ctx context.Context, db DBTX, arg *CreateS
 		arg.Date,
 		arg.EntityID,
 		arg.CreatedByUserID,
+		arg.DocumentNumber,
 	)
 	var id pgtype.UUID
 	err := row.Scan(&id)
@@ -54,6 +58,7 @@ SELECT si.id,
        si.type,
        si.date,
        si.entity_id,
+       si.document_number,
        e.name  as entity_name,
        si.created_by_user_id,
        u.name  as create_by_user_name,
@@ -72,6 +77,7 @@ type GetStockMovementByIDRow struct {
 	Type                MovementType
 	Date                pgtype.Date
 	EntityID            pgtype.UUID
+	DocumentNumber      pgtype.Text
 	EntityName          pgtype.Text
 	CreatedByUserID     pgtype.UUID
 	CreateByUserName    pgtype.Text
@@ -88,6 +94,7 @@ func (q *Queries) GetStockMovementByID(ctx context.Context, db DBTX, stockMoveme
 		&i.Type,
 		&i.Date,
 		&i.EntityID,
+		&i.DocumentNumber,
 		&i.EntityName,
 		&i.CreatedByUserID,
 		&i.CreateByUserName,
@@ -161,6 +168,7 @@ SELECT count(*) over () as full_count,
        si.type,
        si.date,
        si.entity_id,
+       si.document_number,
        e.name           as entity_name,
        si.created_by_user_id,
        u.name           as create_by_user_name,
@@ -171,7 +179,10 @@ from stock_movements si
          left join users uc on si.cancelled_by_user_id = uc.id
          left join users u on si.created_by_user_id = u.id
 where si.status = any ($1::status[])
-  and e.name ilike '%' || $2 || '%'
+  and (
+        e.name ilike '%' || $2 || '%'
+      or si.document_number ilike '%' || $2 || '%'
+    )
   and si.date >= $3
 order by si.date desc
 limit $5 offset $4
@@ -192,6 +203,7 @@ type GetStockMovementsRow struct {
 	Type                MovementType
 	Date                pgtype.Date
 	EntityID            pgtype.UUID
+	DocumentNumber      pgtype.Text
 	EntityName          pgtype.Text
 	CreatedByUserID     pgtype.UUID
 	CreateByUserName    pgtype.Text
@@ -221,6 +233,7 @@ func (q *Queries) GetStockMovements(ctx context.Context, db DBTX, arg *GetStockM
 			&i.Type,
 			&i.Date,
 			&i.EntityID,
+			&i.DocumentNumber,
 			&i.EntityName,
 			&i.CreatedByUserID,
 			&i.CreateByUserName,
@@ -241,15 +254,17 @@ const updateStockMovement = `-- name: UpdateStockMovement :exec
 update stock_movements
  set status = $1,
      entity_id = $2,
-     date = $3
-where id = $4
+     date = $3,
+     document_number = $4
+where id = $5
 `
 
 type UpdateStockMovementParams struct {
-	Status   Status
-	EntityID pgtype.UUID
-	Date     pgtype.Date
-	ID       pgtype.UUID
+	Status         Status
+	EntityID       pgtype.UUID
+	Date           pgtype.Date
+	DocumentNumber pgtype.Text
+	ID             pgtype.UUID
 }
 
 func (q *Queries) UpdateStockMovement(ctx context.Context, db DBTX, arg *UpdateStockMovementParams) error {
@@ -257,6 +272,7 @@ func (q *Queries) UpdateStockMovement(ctx context.Context, db DBTX, arg *UpdateS
 		arg.Status,
 		arg.EntityID,
 		arg.Date,
+		arg.DocumentNumber,
 		arg.ID,
 	)
 	return err

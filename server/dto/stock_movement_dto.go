@@ -14,6 +14,7 @@ type StockMovementDTO struct {
 	Date                time.Time             `json:"date"`
 	EntityID            pgtype.UUID           `json:"entityId"`
 	EntityName          string                `json:"entityName"`
+	DocumentNumber      string                `json:"documentNumber"`
 	CreatedByUserID     pgtype.UUID           `json:"createdByUserId"`
 	CreateByUserName    string                `json:"createByUserName"`
 	CancelledByUserID   pgtype.UUID           `json:"cancelledByUserId"`
@@ -41,6 +42,7 @@ func ToStockMovementDTO(stockMovement *postgres.GetStockMovementByIDRow) *StockM
 		Date:                stockMovement.Date.Time,
 		EntityID:            stockMovement.EntityID,
 		EntityName:          stockMovement.EntityName.String,
+		DocumentNumber:      stockMovement.DocumentNumber.String,
 		CreatedByUserID:     stockMovement.CreatedByUserID,
 		CreateByUserName:    stockMovement.CreateByUserName.String,
 		CancelledByUserID:   stockMovement.CancelledByUserID,

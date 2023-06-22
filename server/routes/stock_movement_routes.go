@@ -63,6 +63,7 @@ func (r *RouteManager) getAllStockMovements(c *fiber.Ctx, tx *pgx.Tx) error {
 			Date:                stockMovements[i].Date.Time,
 			EntityID:            stockMovements[i].EntityID,
 			EntityName:          stockMovements[i].EntityName.String,
+			DocumentNumber:      stockMovements[i].DocumentNumber.String,
 			CreatedByUserID:     stockMovements[i].CreatedByUserID,
 			CreateByUserName:    stockMovements[i].CreateByUserName.String,
 			CancelledByUserID:   stockMovements[i].CancelledByUserID,

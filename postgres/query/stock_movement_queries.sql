@@ -5,6 +5,7 @@ SELECT count(*) over () as full_count,
        si.type,
        si.date,
        si.entity_id,
+       si.document_number,
        e.name           as entity_name,
        si.created_by_user_id,
        u.name           as create_by_user_name,
@@ -15,7 +16,10 @@ from stock_movements si
          left join users uc on si.cancelled_by_user_id = uc.id
          left join users u on si.created_by_user_id = u.id
 where si.status = any (@status_options::status[])
-  and e.name ilike '%' || @search || '%'
+  and (
+        e.name ilike '%' || @search || '%'
+      or si.document_number ilike '%' || @search || '%'
+    )
   and si.date >= @start_date
 order by si.date desc
 limit @page_limit offset @page_offset;
@@ -26,6 +30,7 @@ SELECT si.id,
        si.type,
        si.date,
        si.entity_id,
+       si.document_number,
        e.name  as entity_name,
        si.created_by_user_id,
        u.name  as create_by_user_name,
@@ -56,8 +61,10 @@ insert into stock_movements(
                             type,
                             date,
                             entity_id,
-                            created_by_user_id)
-values (@type, @date, @entity_id, @created_by_user_id)
+                            created_by_user_id,
+                            document_number
+                            )
+values (@type, @date, @entity_id, @created_by_user_id, @document_number)
 returning id;
 
 -- name: CreateStockMovementItems :copyfrom
@@ -68,5 +75,6 @@ values ($1, $2, $3, $4, $5);
 update stock_movements
  set status = @status,
      entity_id = @entity_id,
-     date = @date
+     date = @date,
+     document_number = @document_number
 where id = @id;

@@ -81,4 +81,4 @@ select *
 from production_order_cycles poc
     join order_cycles_movements ocm on poc.id = ocm.cycle_id
     join stock_movements sm on ocm.movement_id = sm.id
-where poc.production_order_id = @production_order_id
+where poc.production_order_id = @production_order_id;
