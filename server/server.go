@@ -44,6 +44,11 @@ func Serve() {
 		AllowHeaders:     "Origin, Content-Type, Accept",
 	}))
 
+	app.Use(func(c *fiber.Ctx) error {
+		time.Sleep(150 * time.Millisecond)
+		return c.Next()
+	})
+
 	//memoryStore := memory.New(memory.Config{
 	//	GCInterval: 5 * time.Hour,
 	//})
