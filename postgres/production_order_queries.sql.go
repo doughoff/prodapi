@@ -13,7 +13,8 @@ import (
 
 const createOrderCycleMovement = `-- name: CreateOrderCycleMovement :one
 insert into order_cycles_movements(cycle_id, movement_id)
-VALUES ($1, $2) returning id
+VALUES ($1, $2)
+returning id
 `
 
 type CreateOrderCycleMovementParams struct {
@@ -29,25 +30,19 @@ func (q *Queries) CreateOrderCycleMovement(ctx context.Context, db DBTX, arg *Cr
 }
 
 const createProductionOrder = `-- name: CreateProductionOrder :one
-insert into production_orders(code, cycles, recipe_id, created_by_user_id)
-values ($1, $2, $3, $4)
+insert into production_orders(cycles, recipe_id, created_by_user_id)
+values ($1, $2, $3)
 returning id
 `
 
 type CreateProductionOrderParams struct {
-	Code            string
 	Cycles          int64
 	RecipeID        pgtype.UUID
 	CreatedByUserID pgtype.UUID
 }
 
 func (q *Queries) CreateProductionOrder(ctx context.Context, db DBTX, arg *CreateProductionOrderParams) (pgtype.UUID, error) {
-	row := db.QueryRow(ctx, createProductionOrder,
-		arg.Code,
-		arg.Cycles,
-		arg.RecipeID,
-		arg.CreatedByUserID,
-	)
+	row := db.QueryRow(ctx, createProductionOrder, arg.Cycles, arg.RecipeID, arg.CreatedByUserID)
 	var id pgtype.UUID
 	err := row.Scan(&id)
 	return id, err
@@ -65,16 +60,18 @@ SELECT po.id,
        po.production_step,
        po.code,
        po.cycles,
+       po.output,
        po.recipe_id,
-       r.name,
+       r.name  as recipe_name,
        r.produced_quantity,
-       p.name,
-       p.unit,
+       p.name  as product_name,
+       p.unit  as product_unit,
        po.created_by_user_id,
        u.name  as create_by_user_name,
        po.cancelled_by_user_id,
        ud.name as cancelled_by_user_name,
-       po.created_at
+       po.created_at,
+       po.updated_at
 from production_orders po
          left join recipes r on po.recipe_id = r.recipe_id
          left join products p on r.product_id = p.id
@@ -87,18 +84,20 @@ type GetProductionOrderByIDRow struct {
 	ID                  pgtype.UUID
 	Status              Status
 	ProductionStep      ProductionStep
-	Code                string
+	Code                pgtype.Text
 	Cycles              int64
+	Output              pgtype.Int8
 	RecipeID            pgtype.UUID
-	Name                pgtype.Text
+	RecipeName          pgtype.Text
 	ProducedQuantity    pgtype.Int8
-	Name_2              pgtype.Text
-	Unit                NullUnit
+	ProductName         pgtype.Text
+	ProductUnit         NullUnit
 	CreatedByUserID     pgtype.UUID
 	CreateByUserName    pgtype.Text
 	CancelledByUserID   pgtype.UUID
 	CancelledByUserName pgtype.Text
 	CreatedAt           pgtype.Timestamp
+	UpdatedAt           pgtype.Timestamp
 }
 
 func (q *Queries) GetProductionOrderByID(ctx context.Context, db DBTX, productionOrderID pgtype.UUID) (*GetProductionOrderByIDRow, error) {
@@ -110,16 +109,38 @@ func (q *Queries) GetProductionOrderByID(ctx context.Context, db DBTX, productio
 		&i.ProductionStep,
 		&i.Code,
 		&i.Cycles,
+		&i.Output,
 		&i.RecipeID,
-		&i.Name,
+		&i.RecipeName,
 		&i.ProducedQuantity,
-		&i.Name_2,
-		&i.Unit,
+		&i.ProductName,
+		&i.ProductUnit,
 		&i.CreatedByUserID,
 		&i.CreateByUserName,
 		&i.CancelledByUserID,
 		&i.CancelledByUserName,
 		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return &i, err
+}
+
+const getProductionOrderCycleByID = `-- name: GetProductionOrderCycleByID :one
+select id, factor, production_order_id, production_step, cycle_order, completed_at
+from production_order_cycles poc
+where poc.id = $1
+`
+
+func (q *Queries) GetProductionOrderCycleByID(ctx context.Context, db DBTX, cycleID pgtype.UUID) (*ProductionOrderCycle, error) {
+	row := db.QueryRow(ctx, getProductionOrderCycleByID, cycleID)
+	var i ProductionOrderCycle
+	err := row.Scan(
+		&i.ID,
+		&i.Factor,
+		&i.ProductionOrderID,
+		&i.ProductionStep,
+		&i.CycleOrder,
+		&i.CompletedAt,
 	)
 	return &i, err
 }
@@ -196,22 +217,24 @@ func (q *Queries) GetProductionOrderMovements(ctx context.Context, db DBTX, prod
 }
 
 const getProductionOrders = `-- name: GetProductionOrders :many
-SELECT count(*) over () as full_count,
+SELECT count(*) over ()    as full_count,
        po.id,
        po.status,
        po.production_step,
        po.code,
        po.cycles,
+       po.output,
        po.recipe_id,
-       r.name,
-       r.produced_quantity,
-       p.name,
-       p.unit,
+       r.name              as recipe_name,
+       r.produced_quantity as produced_quantity,
+       p.name              as product_name,
+       p.unit              as product_unit,
        po.created_by_user_id,
-       u.name           as create_by_user_name,
+       u.name              as create_by_user_name,
        po.cancelled_by_user_id,
-       ud.name          as cancelled_by_user_name,
-       po.created_at
+       ud.name             as cancelled_by_user_name,
+       po.created_at,
+       po.updated_at
 from production_orders po
          left join recipes r on po.recipe_id = r.recipe_id
          left join products p on r.product_id = p.id
@@ -228,11 +251,11 @@ limit $5 offset $4
 `
 
 type GetProductionOrdersParams struct {
-	StatusOptiuons []Status
-	Search         pgtype.Text
-	StartDate      pgtype.Timestamp
-	PageOffset     int32
-	PageLimit      int32
+	StatusOptions []Status
+	Search        pgtype.Text
+	StartDate     pgtype.Timestamp
+	PageOffset    int32
+	PageLimit     int32
 }
 
 type GetProductionOrdersRow struct {
@@ -240,23 +263,25 @@ type GetProductionOrdersRow struct {
 	ID                  pgtype.UUID
 	Status              Status
 	ProductionStep      ProductionStep
-	Code                string
+	Code                pgtype.Text
 	Cycles              int64
+	Output              pgtype.Int8
 	RecipeID            pgtype.UUID
-	Name                pgtype.Text
+	RecipeName          pgtype.Text
 	ProducedQuantity    pgtype.Int8
-	Name_2              pgtype.Text
-	Unit                NullUnit
+	ProductName         pgtype.Text
+	ProductUnit         NullUnit
 	CreatedByUserID     pgtype.UUID
 	CreateByUserName    pgtype.Text
 	CancelledByUserID   pgtype.UUID
 	CancelledByUserName pgtype.Text
 	CreatedAt           pgtype.Timestamp
+	UpdatedAt           pgtype.Timestamp
 }
 
 func (q *Queries) GetProductionOrders(ctx context.Context, db DBTX, arg *GetProductionOrdersParams) ([]*GetProductionOrdersRow, error) {
 	rows, err := db.Query(ctx, getProductionOrders,
-		arg.StatusOptiuons,
+		arg.StatusOptions,
 		arg.Search,
 		arg.StartDate,
 		arg.PageOffset,
@@ -276,16 +301,18 @@ func (q *Queries) GetProductionOrders(ctx context.Context, db DBTX, arg *GetProd
 			&i.ProductionStep,
 			&i.Code,
 			&i.Cycles,
+			&i.Output,
 			&i.RecipeID,
-			&i.Name,
+			&i.RecipeName,
 			&i.ProducedQuantity,
-			&i.Name_2,
-			&i.Unit,
+			&i.ProductName,
+			&i.ProductUnit,
 			&i.CreatedByUserID,
 			&i.CreateByUserName,
 			&i.CancelledByUserID,
 			&i.CancelledByUserName,
 			&i.CreatedAt,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -299,8 +326,8 @@ func (q *Queries) GetProductionOrders(ctx context.Context, db DBTX, arg *GetProd
 
 const updateProductionOrder = `-- name: UpdateProductionOrder :exec
 update production_orders
-    set status = $1,
-        production_step = $2
+set status          = $1,
+    production_step = $2
 where id = $3
 `
 
@@ -312,5 +339,23 @@ type UpdateProductionOrderParams struct {
 
 func (q *Queries) UpdateProductionOrder(ctx context.Context, db DBTX, arg *UpdateProductionOrderParams) error {
 	_, err := db.Exec(ctx, updateProductionOrder, arg.Status, arg.ProductionStep, arg.ID)
+	return err
+}
+
+const updateProductionOrderCycle = `-- name: UpdateProductionOrderCycle :exec
+update production_order_cycles
+set  production_step = $1,
+     completed_at = $2
+where id = $3
+`
+
+type UpdateProductionOrderCycleParams struct {
+	ProductionStep ProductionStep
+	CompletedAt    pgtype.Timestamp
+	ID             pgtype.UUID
+}
+
+func (q *Queries) UpdateProductionOrderCycle(ctx context.Context, db DBTX, arg *UpdateProductionOrderCycleParams) error {
+	_, err := db.Exec(ctx, updateProductionOrderCycle, arg.ProductionStep, arg.CompletedAt, arg.ID)
 	return err
 }

@@ -259,13 +259,14 @@ type ProductionOrder struct {
 	ID                pgtype.UUID
 	Status            Status
 	ProductionStep    ProductionStep
-	Code              string
+	Code              pgtype.Text
 	Cycles            int64
 	RecipeID          pgtype.UUID
 	CreatedByUserID   pgtype.UUID
 	CancelledByUserID pgtype.UUID
 	CreatedAt         pgtype.Timestamp
 	UpdatedAt         pgtype.Timestamp
+	Output            pgtype.Int8
 }
 
 type ProductionOrderCycle struct {

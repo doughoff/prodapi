@@ -82,7 +82,7 @@ func (r *RouteManager) getAllStockMovements(c *fiber.Ctx, tx *pgx.Tx) error {
 
 	for _, item := range items {
 		if sm, ok := resultMap[item.StockMovementID]; ok {
-			sm.Total += item.Price * item.Quantity
+			sm.Total += item.Price * item.Quantity / 1000
 		}
 	}
 
@@ -251,5 +251,5 @@ func (r *RouteManager) RegisterStockMovementRoutes() {
 	r.app.Get("/stock_movements/", r.dbWrapper.WithTransaction(r.getAllStockMovements))
 	r.app.Get("/stock_movements/:id", r.dbWrapper.WithTransaction(r.getStockMovementByID))
 	r.app.Post("/stock_movements/", r.dbWrapper.WithTransaction(r.createStockMovement))
-	r.app.Put("/stock_movements/", r.dbWrapper.WithTransaction(r.updateStockMovement))
+	r.app.Put("/stock_movements/:id", r.dbWrapper.WithTransaction(r.updateStockMovement))
 }
