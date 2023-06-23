@@ -10,6 +10,7 @@ import (
 	"github.com/hoffax/prodapi/server/types"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
+	"math"
 	"time"
 )
 
@@ -82,7 +83,7 @@ func (r *RouteManager) getAllStockMovements(c *fiber.Ctx, tx *pgx.Tx) error {
 
 	for _, item := range items {
 		if sm, ok := resultMap[item.StockMovementID]; ok {
-			sm.Total += item.Price * item.Quantity / 1000
+			sm.Total += int64(math.Round(float64(item.Price*item.Quantity) / 1000))
 		}
 	}
 
