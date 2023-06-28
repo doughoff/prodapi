@@ -38,9 +38,9 @@ func (r *RouteManager) getAllStockMovements(c *fiber.Ctx, tx *pgx.Tx) error {
 	}
 
 	typeOptions := make([]postgres.MovementType, len(params.StatusOptions))
-	for i, status := range params.StatusOptions {
-		statusOptions[i] = postgres.Status(status)
-		if !statusOptions[i].Valid() {
+	for i, option := range params.StatusOptions {
+		typeOptions[i] = postgres.MovementType(option)
+		if !typeOptions[i].Valid() {
 			return types.NewInvalidParamsError("invalid types option")
 		}
 	}
