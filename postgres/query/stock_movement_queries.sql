@@ -16,6 +16,7 @@ from stock_movements si
          left join users uc on si.cancelled_by_user_id = uc.id
          left join users u on si.created_by_user_id = u.id
 where si.status = any (@status_options::status[])
+  and si.type = any (@type_options::movement_type[])
   and (
         e.name ilike '%' || @search || '%'
       or si.document_number ilike '%' || @search || '%'

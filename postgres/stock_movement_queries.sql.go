@@ -179,17 +179,19 @@ from stock_movements si
          left join users uc on si.cancelled_by_user_id = uc.id
          left join users u on si.created_by_user_id = u.id
 where si.status = any ($1::status[])
+  and si.type = any ($2::movement_type[])
   and (
-        e.name ilike '%' || $2 || '%'
-      or si.document_number ilike '%' || $2 || '%'
+        e.name ilike '%' || $3 || '%'
+      or si.document_number ilike '%' || $3 || '%'
     )
-  and si.date >= $3
+  and si.date >= $4
 order by si.date desc
-limit $5 offset $4
+limit $6 offset $5
 `
 
 type GetStockMovementsParams struct {
 	StatusOptions []Status
+	TypeOptions   []MovementType
 	Search        pgtype.Text
 	StartDate     pgtype.Date
 	PageOffset    int32
@@ -214,6 +216,7 @@ type GetStockMovementsRow struct {
 func (q *Queries) GetStockMovements(ctx context.Context, db DBTX, arg *GetStockMovementsParams) ([]*GetStockMovementsRow, error) {
 	rows, err := db.Query(ctx, getStockMovements,
 		arg.StatusOptions,
+		arg.TypeOptions,
 		arg.Search,
 		arg.StartDate,
 		arg.PageOffset,

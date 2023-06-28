@@ -16,6 +16,7 @@ import (
 
 type getAllStockMovementsQuery struct {
 	StatusOptions []string  `query:"status"`
+	TypeOptions   []string  `query:"types"`
 	Search        string    `query:"search"`
 	StartDate     time.Time `query:"startDate"`
 	Limit         int32     `query:"limit"`
@@ -36,8 +37,17 @@ func (r *RouteManager) getAllStockMovements(c *fiber.Ctx, tx *pgx.Tx) error {
 		}
 	}
 
+	typeOptions := make([]postgres.MovementType, len(params.StatusOptions))
+	for i, status := range params.StatusOptions {
+		statusOptions[i] = postgres.Status(status)
+		if !statusOptions[i].Valid() {
+			return types.NewInvalidParamsError("invalid types option")
+		}
+	}
+
 	stockMovements, err := r.db.GetStockMovements(c.Context(), *tx, &postgres.GetStockMovementsParams{
 		StatusOptions: statusOptions,
+		TypeOptions:   typeOptions,
 		Search:        pgtype.Text(sql.NullString{String: params.Search, Valid: true}),
 		StartDate:     pgtype.Date{Time: params.StartDate, Valid: true},
 		PageLimit:     params.Limit,
